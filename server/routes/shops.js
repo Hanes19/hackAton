@@ -27,10 +27,10 @@ router.get('/:id', async (req, res) => {
 
 // register a new shop
 router.post('/', async (req, res) => {
-  const { name, description, category, lat, lng, address } = req.body
+  const { name, description, category, lat, lng, address, user_id } = req.body
   const { data, error } = await getSupabase()
     .from('shops')
-    .insert([{ name, description, category, lat, lng, address }])
+    .insert([{ name, description, category, lat, lng, address, user_id }])
     .select()
   if (error) return res.status(500).json({ error: error.message })
   res.json(data[0])

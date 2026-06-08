@@ -12,21 +12,18 @@
   let error = $state('')
 
   async function submit() {
-    loading = true
-    error = ''
-    const res = await fetch('/api/shops', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description, category, address, lat, lng })
-    })
-    const data = await res.json()
-    loading = false
-    if (data.error) {
-      error = data.error
-    } else {
-      success = true
-    }
-  }
+  loading = true
+  error = ''
+  const res = await fetch('/api/shops', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description, category, address, lat, lng })
+  })
+  const data = await res.json()
+  loading = false
+  if (data.error) error = data.error
+  else success = true
+}
 </script>
 
 <div style="max-width: 480px; margin: 2rem auto; padding: 0 1rem;">
