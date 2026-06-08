@@ -1,2 +1,9 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+<script>
+  const { countries = [] } = $props();
+</script>
+
+<ul>
+  {#each countries as country (country.id ?? country.name)}
+    <li>{country.name}</li>
+  {/each}
+</ul>
