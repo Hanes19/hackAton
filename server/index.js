@@ -1,11 +1,16 @@
-import express from 'express';
-import cors from 'cors';
+import 'dotenv/config'
+import express from 'express'
+import cors from 'cors'
+import shopsRouter from './routes/shops.js'
 
-const app = express();
+console.log('URL:', process.env.SUPABASE_URL)
+console.log('KEY:', process.env.SUPABASE_ANON_KEY)
 
-app.use(cors());
-app.use(express.json());
+const app = express()
 
-app.get('/', (req, res) => res.json({ ok: true }));
+app.use(cors())
+app.use(express.json())
 
-app.listen(3001, () => console.log('API running on http://localhost:3001'));
+app.use('/api/shops', shopsRouter)
+
+app.listen(3001, () => console.log('API running on http://localhost:3001'))
