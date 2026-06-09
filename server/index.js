@@ -3,8 +3,9 @@ import express from 'express'
 import cors from 'cors'
 import shopsRouter from './routes/shops.js'
 
-console.log('URL:', process.env.SUPABASE_URL)
-console.log('KEY:', process.env.SUPABASE_ANON_KEY)
+// FIXED: Look for the PUBLIC_ prefixed variables from your root .env file
+console.log('URL:', process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL)
+console.log('KEY:', process.env.PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY)
 
 const app = express()
 

@@ -4,7 +4,11 @@ import { createClient } from '@supabase/supabase-js'
 const router = express.Router()
 
 function getSupabase() {
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY)
+  // FIXED: Tell the backend to use the PUBLIC_ variables
+  const url = process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+  const key = process.env.PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
+  
+  return createClient(url, key)
 }
 
 // get all shops
