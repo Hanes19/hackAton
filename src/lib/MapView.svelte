@@ -22,8 +22,8 @@
   } = $props()
 
   let mapEl: HTMLDivElement
-  let map: Map
-  let L: typeof import('leaflet')
+  let map = $state<Map | undefined>(undefined)
+  let L = $state<typeof import('leaflet') | undefined>(undefined)
   let markers: Record<string, Marker> = {}
   let userMarker: Marker | null = null
   let routeLayer: GeoJSON | null = null
