@@ -1,11 +1,15 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
+  import { page } from '$app/stores'
   import { login } from '$lib/auth'
+  import { safeRedirect, registerUserUrl } from '$lib/navigation'
 
   let email = $state('')
   let password = $state('')
   let loading = $state(false)
   let error = $state('')
+
+  let redirectTo = $derived(safeRedirect($page.url.searchParams.get('redirect'), '/'))
 
   async function submit() {
     loading = true
@@ -13,7 +17,7 @@
     const { error: err } = await login(email, password)
     loading = false
     if (err) error = err.message
-    else goto('/')
+    else goto(redirectTo)
   }
 </script>
 
@@ -83,7 +87,7 @@
     <div class="divider"><span>or</span></div>
 
     <p class="footer-text">
-      New to LocalMarket? <a href="/register-user">Create an account</a>
+      New to LocalMarket? <a href={registerUserUrl(redirectTo)}>Create an account</a>
     </p>
   </div>
 </div>

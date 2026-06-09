@@ -11,6 +11,7 @@
   } from '$lib/lgu'
   import type { User } from '@supabase/supabase-js'
   import LocationPicker from '$lib/LocationPicker.svelte'
+  import { loginUrl, registerUserUrl } from '$lib/navigation'
 
   const lguCenters: Record<string, { lat: number; lng: number }> = {
     'Valencia City': { lat: 7.9064, lng: 125.0948 },
@@ -65,6 +66,9 @@
 
   onMount(async () => {
     user = await getUser()
+    if (user?.user_metadata?.name && !ownerName) {
+      ownerName = String(user.user_metadata.name)
+    }
     try {
       lgus = await fetchLguMunicipalities()
     } catch {
@@ -153,6 +157,13 @@
 
   async function submit() {
     if (!canAdvance()) return
+
+    if (!user) {
+      error = 'Please sign in or create an account before submitting your seller application.'
+      goto(loginUrl('/register'))
+      return
+    }
+
     loading = true
     error = ''
 
@@ -203,9 +214,16 @@
         </div>
       </div>
       {#if !user}
-        <p class="auth-hint">
-          <a href="/login">Sign in</a> or <a href="/register-user">create an account</a> to link your shop to your profile.
-        </p>
+        <div class="auth-banner">
+          <strong>Account required to submit</strong>
+          <p>Sign in or create a free account to link your shop to your profile. You can fill out the form first.</p>
+          <div class="auth-banner-actions">
+            <a href={loginUrl('/register')} class="banner-btn primary">Sign in</a>
+            <a href={registerUserUrl('/register')} class="banner-btn">Create account</a>
+          </div>
+        </div>
+      {:else}
+        <p class="auth-hint signed-in">Signed in as <strong>{user.email}</strong></p>
       {/if}
     </div>
 
@@ -501,7 +519,34 @@
   }
   .brand p { margin: 4px 0 0; font-size: 13px; color: #4d7a9e; }
   .auth-hint { font-size: 13px; color: #3a6080; margin-top: 0.75rem; }
+  .auth-hint.signed-in { color: #34d399; margin-bottom: 0.5rem; }
   .auth-hint a { color: #49b6ea; text-decoration: none; }
+
+  .auth-banner {
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 1rem;
+  }
+  .auth-banner strong { display: block; color: #fcd34d; font-size: 13px; margin-bottom: 4px; }
+  .auth-banner p { margin: 0 0 10px; font-size: 12px; color: #84b9d5; line-height: 1.5; }
+  .auth-banner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .banner-btn {
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid #143e88;
+    color: #84b9d5;
+    background: #091525;
+  }
+  .banner-btn.primary {
+    background: linear-gradient(135deg, #0d58b0, #49b6ea);
+    border-color: transparent;
+    color: white;
+  }
 
   .stepper {
     display: flex;

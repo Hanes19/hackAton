@@ -17,6 +17,7 @@
     address: string
     lat: number
     lng: number
+    business_type?: string | null
     products: Product[]
   }
 
@@ -48,7 +49,9 @@
 
       <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid #eee;" />
 
-      <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">Products & Services</h2>
+      <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">
+        {shop.business_type === 'service' ? 'Services' : 'Products & Services'}
+      </h2>
 
       {#if shop.products && shop.products.length > 0}
         <div style="display: flex; flex-direction: column; gap: 10px;">

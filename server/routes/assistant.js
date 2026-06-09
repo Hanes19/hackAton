@@ -28,7 +28,7 @@ How to become a seller:
 4. Verify your Mayor's/Business Permit number with integrated LGU verification
 5. Upload a valid government ID (PhilID, driver's license, passport, UMID, etc.)
 6. Submit for admin review — shop appears on the map once approved
-7. Add products from /dashboard
+7. Open /dashboard → choose business type (Product or Service), complete shop setup, and add listings
 
 When product/shop matches appear in the context, mention them by name and price if available. Tell the user they can tap the button below to visit the shop.
 
@@ -133,7 +133,7 @@ function fallbackReply(message, matches, page) {
   if (/dashboard|seller|sell|business|shop setup|register.*shop|become.*seller/.test(lower)) {
     return {
       message:
-        'To set up your business:\n\n1. Create an account at Register\n2. Log in\n3. Go to your Seller Dashboard\n4. Fill in shop details and pin your location on the map\n5. Add your products\n\nNeed help with a specific step? Just ask!',
+        'To set up your business:\n\n1. Register at /register with LGU permit verification\n2. Log in and open /dashboard\n3. Choose business type: Product-based or Service-based\n4. Complete shop profile and pin your location\n5. Add products or services\n\nNeed help with a specific step? Just ask!',
       actions: [
         { type: 'navigate', url: '/register-user', label: 'Create Account' },
         { type: 'navigate', url: '/dashboard', label: 'Seller Dashboard' }

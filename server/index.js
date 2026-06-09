@@ -4,6 +4,7 @@ import { dirname, join } from 'path'
 import express from 'express'
 import cors from 'cors'
 import shopsRouter from './routes/shops.js'
+import productsRouter from './routes/products.js'
 import assistantRouter from './routes/assistant.js'
 import lguRouter from './routes/lgu.js'
 
@@ -21,6 +22,7 @@ app.use(cors())
 app.use(express.json())
 
 app.use('/api/shops', shopsRouter)
+app.use('/api/products', productsRouter)
 app.use('/api/lgu', lguRouter)
 app.use('/api/assistant', assistantRouter)
 

@@ -10,7 +10,22 @@ function getSupabase() {
 }
 
 const PUBLIC_SHOP_FIELDS =
-  'id, name, description, category, lat, lng, address, created_at, verification_status, permit_verified, owner_name'
+  'id, name, description, category, lat, lng, address, created_at, verification_status, permit_verified, owner_name, business_type, shop_setup_complete'
+
+// get seller's shop by user id
+router.get('/user/:userId', async (req, res) => {
+  const { data, error } = await getSupabase()
+    .from('shops')
+    .select('*, products(*)')
+    .eq('user_id', req.params.userId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) return res.status(500).json({ error: error.message })
+  if (!data) return res.status(404).json({ error: 'No shop found for this user.' })
+  res.json(data)
+})
 
 // get all shops (public: approved only; ?all=true for admin)
 router.get('/', async (req, res) => {
@@ -93,6 +108,8 @@ router.post('/', async (req, res) => {
     id_number: id_number.trim(),
     id_document_data,
     id_document_name: id_document_name?.trim() || null,
+    business_type: req.body.business_type === 'service' ? 'service' : 'product',
+    shop_setup_complete: false,
     verification_status: 'pending',
     lgu_verified_at: new Date().toISOString()
   }
@@ -100,6 +117,43 @@ router.post('/', async (req, res) => {
   const { data, error } = await getSupabase().from('shops').insert([payload]).select()
   if (error) return res.status(500).json({ error: error.message })
   res.json(data[0])
+})
+
+// seller: update shop profile / setup
+router.patch('/:id', async (req, res) => {
+  const allowed = [
+    'name',
+    'description',
+    'category',
+    'business_type',
+    'address',
+    'lat',
+    'lng',
+    'shop_setup_complete'
+  ]
+
+  const update = {}
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) update[key] = req.body[key]
+  }
+
+  if (update.business_type && !['product', 'service'].includes(update.business_type)) {
+    return res.status(400).json({ error: 'business_type must be product or service.' })
+  }
+
+  if (Object.keys(update).length === 0) {
+    return res.status(400).json({ error: 'No valid fields to update.' })
+  }
+
+  const { data, error } = await getSupabase()
+    .from('shops')
+    .update(update)
+    .eq('id', req.params.id)
+    .select('*, products(*)')
+    .single()
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.json(data)
 })
 
 // admin: approve or reject seller application

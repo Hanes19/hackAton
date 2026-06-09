@@ -1,6 +1,8 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
+  import { page } from '$app/stores'
   import { register } from '$lib/auth'
+  import { safeRedirect, loginUrl } from '$lib/navigation'
 
   let name = $state('')
   let email = $state('')
@@ -9,6 +11,8 @@
   let loading = $state(false)
   let error = $state('')
 
+  let nextUrl = $derived(safeRedirect($page.url.searchParams.get('next'), '/'))
+
   async function submit() {
     if (password !== confirm) { error = 'Passwords do not match'; return }
     loading = true
@@ -16,7 +20,7 @@
     const { error: err } = await register(email, password, name)
     loading = false
     if (err) error = err.message
-    else goto('/')
+    else goto(nextUrl)
   }
 </script>
 
@@ -109,7 +113,7 @@
     <div class="divider"><span>or</span></div>
 
     <p class="footer-text">
-      Already have an account? <a href="/login">Sign in</a>
+      Already have an account? <a href={loginUrl(nextUrl)}>Sign in</a>
     </p>
   </div>
 </div>
