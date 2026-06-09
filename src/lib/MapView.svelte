@@ -10,13 +10,15 @@
     selectedShopId = null, 
     userLocation = null,
     routeGeometry = null,
-    isNavigating = false
+    isNavigating = false,
+    recenterTrigger = 0
   }: { 
     shops: Shop[], 
     selectedShopId?: string | null, 
     userLocation: { lat: number; lng: number } | null,
-    routeGeometry: GeoJsonObject | null, // Perfectly typed!
-    isNavigating?: boolean
+    routeGeometry: GeoJsonObject | null,
+    isNavigating?: boolean,
+    recenterTrigger?: number
   } = $props()
 
   let mapEl: HTMLDivElement
@@ -25,6 +27,7 @@
   let markers: Record<string, Marker> = {}
   let userMarker: Marker | null = null
   let routeLayer: GeoJSON | null = null
+  let lastTrigger = 0
 
   function addMarkers() {
     if (!map || !L) return
@@ -46,6 +49,7 @@
 
   $effect(() => { void shops; addMarkers() })
 
+  // Live GPS Marker Logic
   $effect(() => {
     if (map && L && userLocation) {
       if (userMarker) userMarker.remove()
@@ -53,7 +57,8 @@
       const userIcon = L.divIcon({
         className: 'user-gps-marker',
         html: `<div class="gps-dot"></div><div class="gps-pulse"></div>`,
-        iconSize: [20, 20]
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
       })
       userMarker = L.marker([userLocation.lat, userLocation.lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map)
       
@@ -63,17 +68,26 @@
     }
   })
 
+  // FIXED: Camera Snap-to-User Logic
+  $effect(() => {
+    if (map && userLocation && recenterTrigger > lastTrigger) {
+      // Changed zoom level from 15 to 18 for a tight, street-level zoom!
+      map.flyTo([userLocation.lat, userLocation.lng], 18, { animate: true, duration: 1.2 })
+      lastTrigger = recenterTrigger
+    }
+  })
+
+  // Routing Path Logic
   $effect(() => {
     if (map && L) {
       if (routeLayer) routeLayer.remove()
       
       if (routeGeometry) {
-        // No more 'as any' needed!
         routeLayer = L.geoJSON(routeGeometry, {
           style: { color: '#3b82f6', weight: 6, opacity: 0.8, lineCap: 'round', lineJoin: 'round' }
         }).addTo(map)
 
-        if (!isNavigating) {
+        if (!isNavigating && recenterTrigger === lastTrigger) {
           map.fitBounds(routeLayer.getBounds(), { padding: [50, 50], animate: true, duration: 1 })
         }
       } 
@@ -103,8 +117,8 @@
 
 <style>
   :global(.leaflet-popup-content-wrapper) { border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-  :global(.user-gps-marker) { display: flex; align-items: center; justify-content: center; }
-  :global(.gps-dot) { width: 16px; height: 16px; background: #10b981; border: 3px solid white; border-radius: 50%; z-index: 2; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
-  :global(.gps-pulse) { position: absolute; width: 48px; height: 48px; background: rgba(16, 185, 129, 0.4); border-radius: 50%; animation: gpsPulse 2s infinite ease-out; z-index: 1; }
-  @keyframes gpsPulse { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2.2); opacity: 0; } }
+  :global(.user-gps-marker) { display: flex; align-items: center; justify-content: center; position: relative; }
+  :global(.gps-dot) { position: absolute; width: 14px; height: 14px; background: #10b981; border: 3px solid white; border-radius: 50%; z-index: 2; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+  :global(.gps-pulse) { position: absolute; width: 44px; height: 44px; background: rgba(16, 185, 129, 0.4); border-radius: 50%; animation: gpsPulse 2s infinite ease-out; z-index: 1; }
+  @keyframes gpsPulse { 0% { transform: scale(0.1); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
 </style>

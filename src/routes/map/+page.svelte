@@ -8,7 +8,6 @@
 
   interface Shop { id: string; name: string; category: string; lat: number; lng: number; address: string; description: string }
 
-  // NEW: Define the shape of the OSRM API response to completely avoid 'any'
   interface OSRMResponse {
     routes: {
       geometry: GeoJsonObject;
@@ -26,12 +25,12 @@
   let userLocation = $state<{ lat: number; lng: number } | null>(null)
   let travelMode = $state<'walking' | 'motorcycle' | 'car'>('motorcycle')
   
-  // Live Tracking States
+  // Tracking States
   let trackingLoading = $state(false)
   let isNavigating = $state(false)
   let watchId = $state<number | null>(null)
+  let recenterTrigger = $state(0) 
 
-  // PERFECTLY TYPED: Route Geometry States
   let routeGeometry = $state<GeoJsonObject | null>(null)
   let routeDistance = $state<number | null>(null) 
   let routeEta = $state<number | null>(null)
@@ -47,7 +46,6 @@
 
   let selectedShop = $derived(shops.find(s => s.id === focusedShopId) || null)
 
-  // OSRM Real-Time Path Engine
   $effect(() => {
     if (userLocation && selectedShop) {
       isRouting = true;
@@ -57,12 +55,11 @@
       
       fetch(url)
         .then(res => res.json())
-        .then((data: OSRMResponse) => { // Cast the response to our strict interface
+        .then((data: OSRMResponse) => { 
           if (data.routes && data.routes.length > 0) {
-            const route = data.routes[0];
-            routeGeometry = route.geometry;
-            routeDistance = route.distance / 1000;
-            routeEta = Math.ceil(route.duration / 60);
+            routeGeometry = data.routes[0].geometry;
+            routeDistance = data.routes[0].distance / 1000;
+            routeEta = Math.ceil(data.routes[0].duration / 60);
           }
         })
         .finally(() => isRouting = false);
@@ -79,28 +76,50 @@
     shops = shopsRes
     user = currentUser
 
-    toggleGpsTracking()
+    // Ask for location on load
+    handleGpsClick()
   })
 
-  function toggleGpsTracking() {
-    if (!navigator.geolocation) return alert('Geolocation not supported.')
+  // FIXED: Bulletproof GPS locking mechanism for Desktop and Mobile
+  function handleGpsClick() {
+    if (!navigator.geolocation) return alert('Geolocation not supported by this browser.')
     
+    // 1. If we are already tracking, just snap the camera back to the user
     if (watchId !== null) {
-      navigator.geolocation.clearWatch(watchId)
-      watchId = null
-      userLocation = null
-      isNavigating = false
-    } else {
-      trackingLoading = true
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-          trackingLoading = false
-        },
-        (err) => { console.error(err); trackingLoading = false; },
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
-      )
+      if (userLocation) recenterTrigger++
+      return
     }
+
+    trackingLoading = true
+    
+    // 2. Force a fast, LOW-ACCURACY initial lock to prevent desktop browser timeouts
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+        recenterTrigger++
+        trackingLoading = false
+        
+        // 3. Silently hand off to the HIGH-ACCURACY continuous watcher in the background
+        watchId = navigator.geolocation.watchPosition(
+          (newPos) => {
+            userLocation = { lat: newPos.coords.latitude, lng: newPos.coords.longitude }
+          },
+          (err) => console.warn("Background watcher error:", err),
+          { enableHighAccuracy: true, maximumAge: 5000 }
+        )
+      },
+      (err) => {
+        console.error("GPS Error:", err)
+        trackingLoading = false
+        if (err.code === err.PERMISSION_DENIED) {
+          alert('Location permission denied. Please check your browser settings AND your computer\'s system settings.')
+        } else {
+          alert('Could not lock your location. Ensure your device\'s location services are turned on.')
+        }
+      },
+      // MAGIC FIX: High accuracy is FALSE for the initial ping so it doesn't hang!
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: Infinity } 
+    )
   }
 
   onDestroy(() => {
@@ -159,9 +178,9 @@
     </aside>
 
     <main class="map-area">
-      <MapView shops={filtered} selectedShopId={focusedShopId} {userLocation} {routeGeometry} {isNavigating} />
+      <MapView shops={filtered} selectedShopId={focusedShopId} {userLocation} {routeGeometry} {isNavigating} {recenterTrigger} />
 
-      <button class="gps-trigger-btn" class:active={watchId !== null} onclick={toggleGpsTracking} disabled={trackingLoading} title="Toggle GPS">
+      <button class="gps-trigger-btn" class:active={watchId !== null} onclick={handleGpsClick} disabled={trackingLoading} title="Center on my location">
         {trackingLoading ? '⌛' : '🎯'}
       </button>
 
@@ -192,14 +211,14 @@
             <button 
               class="btn-primary" 
               style="width: 100%; margin-top: 12px; padding: 12px; font-size: 14px; text-align: center; justify-content: center; background: {isNavigating ? '#ef4444' : '#3b82f6'};" 
-              onclick={() => isNavigating = !isNavigating}
+              onclick={() => { isNavigating = !isNavigating; if (isNavigating) recenterTrigger++; }}
             >
               {isNavigating ? '⏹ Stop Navigation' : '▶ Start Navigation'}
             </button>
           {:else}
             <div style="text-align: center; padding: 0.5rem 0;">
               <p style="font-size: 12px; color: #84b9d5; margin: 0 0 10px 0;">Enable location tracking to start navigation.</p>
-              <button class="btn-primary" style="padding: 6px 12px; font-size: 11px;" onclick={toggleGpsTracking}>Enable GPS Tracking</button>
+              <button class="btn-primary" style="padding: 6px 12px; font-size: 11px;" onclick={handleGpsClick}>Enable GPS Tracking</button>
             </div>
           {/if}
         </div>
