@@ -76,15 +76,15 @@
     shops = shopsRes
     user = currentUser
 
-    // Ask for location on load
+    // Ask for location on load using the new robust function
     handleGpsClick()
   })
 
-  // FIXED: Bulletproof GPS locking mechanism for Desktop and Mobile
+  // THE FIX: Bulletproof GPS locking mechanism
   function handleGpsClick() {
     if (!navigator.geolocation) return alert('Geolocation not supported by this browser.')
     
-    // 1. If we are already tracking, just snap the camera back to the user
+    // 1. If we are already tracking, snap the camera to user
     if (watchId !== null) {
       if (userLocation) recenterTrigger++
       return
@@ -92,14 +92,14 @@
 
     trackingLoading = true
     
-    // 2. Force a fast, LOW-ACCURACY initial lock to prevent desktop browser timeouts
+    // 2. Force a fast, LOW-ACCURACY initial lock to prevent Windows timeout crashes
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }
         recenterTrigger++
         trackingLoading = false
         
-        // 3. Silently hand off to the HIGH-ACCURACY continuous watcher in the background
+        // 3. Silently hand off to the continuous watcher in the background
         watchId = navigator.geolocation.watchPosition(
           (newPos) => {
             userLocation = { lat: newPos.coords.latitude, lng: newPos.coords.longitude }
@@ -112,7 +112,7 @@
         console.error("GPS Error:", err)
         trackingLoading = false
         if (err.code === err.PERMISSION_DENIED) {
-          alert('Location permission denied. Please check your browser settings AND your computer\'s system settings.')
+          alert('Location permission denied. Please check your browser settings AND your Windows privacy settings.')
         } else {
           alert('Could not lock your location. Ensure your device\'s location services are turned on.')
         }
@@ -192,12 +192,12 @@
             <div class="routing-metrics">
               <div class="metric">
                 <span class="lbl">Distance</span>
-                <span class="val">{routeDistance !== null ? `${routeDistance.toFixed(2)} km` : '...'}</span>
+                <span class="val">{routeDistance !== null && !isNaN(routeDistance) ? `${routeDistance.toFixed(2)} km` : '...'}</span>
               </div>
               <div class="metric">
                 <span class="lbl">ETA</span>
                 <span class="val" style="color: #49b6ea;">
-                  {#if isRouting} ... {:else if routeEta !== null} {routeEta} mins {:else} -- {/if}
+                  {#if isRouting} ... {:else if routeEta !== null && !isNaN(routeEta)} {routeEta} mins {:else} -- {/if}
                 </span>
               </div>
             </div>
