@@ -9,10 +9,21 @@
     fetchMyShop,
     updateShop,
     addListing,
+    updateListing,
     deleteListing,
     type SellerShop,
-    type BusinessType
+    type BusinessType,
+    type SellerProduct
   } from '$lib/seller'
+  import ListingEditor from '$lib/ListingEditor.svelte'
+  import {
+    emptyListingForm,
+    listingFromProduct,
+    formatDetailChips,
+    getProductIndustry,
+    getServiceType
+  } from '$lib/listingCatalog'
+  import type { ListingFormData } from '$lib/listingCatalog'
   import type { User } from '@supabase/supabase-js'
 
   type Tab = 'overview' | 'setup' | 'listings'
@@ -34,10 +45,10 @@
   let lng = $state(125.0948)
   let locationPinned = $state(false)
 
-  let listingName = $state('')
-  let listingPrice = $state('')
-  let listingDesc = $state('')
-  let addingListing = $state(false)
+  let listingForm = $state<ListingFormData>(emptyListingForm('product'))
+  let editingListingId = $state<string | null>(null)
+  let showEditor = $state(false)
+  let savingListing = $state(false)
 
   const categories = ['Food', 'Clothing', 'Electronics', 'Services', 'Health & Beauty', 'Other']
 
@@ -119,26 +130,72 @@
     }
   }
 
-  async function handleAddListing() {
-    if (!shop || !listingName.trim()) return
-    addingListing = true
+  function openNewListing() {
+    listingForm = emptyListingForm(businessType)
+    editingListingId = null
+    showEditor = true
+    error = ''
+    success = ''
+  }
+
+  function openEditListing(item: SellerProduct) {
+    listingForm = listingFromProduct(item)
+    editingListingId = item.id
+    showEditor = true
+    error = ''
+    success = ''
+  }
+
+  function cancelListingEdit() {
+    showEditor = false
+    editingListingId = null
+    listingForm = emptyListingForm(businessType)
+  }
+
+  function buildListingPayload() {
+    return {
+      name: listingForm.name.trim(),
+      price: parseFloat(listingForm.price) || 0,
+      description: listingForm.description.trim(),
+      highlights: listingForm.highlights.trim(),
+      listing_type: businessType,
+      industry: listingForm.industryId,
+      subcategory: listingForm.subcategory,
+      image_data: listingForm.imageData || undefined,
+      image_name: listingForm.imageName || undefined,
+      details: listingForm.details
+    }
+  }
+
+  async function handleSaveListing() {
+    if (!shop || !listingForm.name.trim()) return
+    savingListing = true
     error = ''
 
     try {
-      const item = await addListing(shop.id, {
-        name: listingName.trim(),
-        price: parseFloat(listingPrice) || 0,
-        description: listingDesc.trim()
-      })
-      shop = { ...shop, products: [item, ...(shop.products ?? [])] }
-      listingName = ''
-      listingPrice = ''
-      listingDesc = ''
-      success = `${listingLabel} added.`
+      const payload = buildListingPayload()
+      let item: SellerProduct
+
+      if (editingListingId) {
+        item = await updateListing(editingListingId, payload)
+        shop = {
+          ...shop,
+          products: (shop.products ?? []).map((p) => (p.id === item.id ? item : p))
+        }
+        success = `${listingLabel} updated.`
+      } else {
+        item = await addListing(shop.id, payload)
+        shop = { ...shop, products: [item, ...(shop.products ?? [])] }
+        success = `${listingLabel} published.`
+      }
+
+      showEditor = false
+      editingListingId = null
+      listingForm = emptyListingForm(businessType)
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Could not add listing.'
+      error = e instanceof Error ? e.message : 'Could not save listing.'
     } finally {
-      addingListing = false
+      savingListing = false
     }
   }
 
@@ -349,54 +406,66 @@
           <div>
             <h1>{listingsTitle}</h1>
             <p>
-              Add {businessType === 'service' ? 'services' : 'products'} buyers can discover on Budol Map.
+              Build rich {businessType === 'service' ? 'service' : 'product'} listings with photos, categories, and custom details.
             </p>
           </div>
-          <button class="secondary-btn" onclick={() => (activeTab = 'setup')}>Edit Shop Setup</button>
+          <div class="header-actions">
+            <button class="secondary-btn" onclick={() => (activeTab = 'setup')}>Edit Shop Setup</button>
+            {#if !showEditor}
+              <button class="primary-btn" onclick={openNewListing}>+ New {listingLabel}</button>
+            {/if}
+          </div>
         </header>
 
-        <section class="panel">
-          <h2>Add {listingLabel}</h2>
-          <div class="fields">
-            <div class="field-row">
-              <div class="field flex-2">
-                <label for="item-name">{listingLabel} name</label>
-                <input
-                  id="item-name"
-                  bind:value={listingName}
-                  placeholder={businessType === 'service' ? 'e.g. Haircut & styling' : 'e.g. Pineapple pie'}
-                />
-              </div>
-              <div class="field">
-                <label for="item-price">{businessType === 'service' ? 'Rate (₱)' : 'Price (₱)'}</label>
-                <input id="item-price" type="number" min="0" step="0.01" bind:value={listingPrice} placeholder="0.00" />
-              </div>
-            </div>
-            <div class="field">
-              <label for="item-desc">Description</label>
-              <input id="item-desc" bind:value={listingDesc} placeholder="Short description" />
-            </div>
-          </div>
-          <button class="primary-btn" onclick={handleAddListing} disabled={addingListing || !listingName.trim()}>
-            {addingListing ? 'Adding…' : `Add ${listingLabel}`}
-          </button>
-        </section>
+        {#if showEditor}
+          <section class="panel editor-panel">
+            <h2>{editingListingId ? `Edit ${listingLabel}` : `Create ${listingLabel}`}</h2>
+            <ListingEditor
+              {businessType}
+              bind:form={listingForm}
+              saving={savingListing}
+              onsave={handleSaveListing}
+              oncancel={cancelListingEdit}
+            />
+          </section>
+        {/if}
 
         <section class="panel">
           <h2>{listingsTitle} ({listings.length})</h2>
           {#if listings.length === 0}
-            <p class="muted">No {businessType === 'service' ? 'services' : 'products'} yet. Add your first listing above.</p>
+            <p class="muted">No {businessType === 'service' ? 'services' : 'products'} yet. Click <strong>+ New {listingLabel}</strong> to open the editor.</p>
           {:else}
-            <div class="listing-grid">
+            <div class="listing-grid rich">
               {#each listings as item (item.id)}
-                <div class="listing-card">
-                  <div>
+                {@const chips = formatDetailChips(businessType, item.industry ?? '', (item.details as Record<string, string>) ?? {})}
+                {@const catLabel = businessType === 'service'
+                  ? getServiceType(item.industry ?? 'personal_care').label
+                  : (item.subcategory || getProductIndustry(item.industry ?? 'food').label)}
+                <div class="listing-card rich">
+                  {#if item.image_data}
+                    <img src={item.image_data} alt="" class="listing-thumb" />
+                  {:else}
+                    <div class="listing-thumb placeholder">{businessType === 'service' ? '🛠' : '📦'}</div>
+                  {/if}
+                  <div class="listing-content">
+                    <div class="listing-tags">
+                      <span class="tag">{catLabel}</span>
+                      {#if item.highlights}<span class="tag highlight">{item.highlights}</span>{/if}
+                    </div>
                     <strong>{item.name}</strong>
                     <p>{item.description || 'No description'}</p>
+                    {#if chips.length}
+                      <div class="chip-row">
+                        {#each chips as chip}<span class="mini-chip">{chip}</span>{/each}
+                      </div>
+                    {/if}
                   </div>
                   <div class="listing-meta">
                     <span class="price">₱{Number(item.price).toLocaleString()}</span>
-                    <button class="icon-btn" onclick={() => handleDeleteListing(item.id)} aria-label="Delete">✕</button>
+                    <div class="listing-btns">
+                      <button class="text-btn" onclick={() => openEditListing(item)}>Edit</button>
+                      <button class="icon-btn" onclick={() => handleDeleteListing(item.id)} aria-label="Delete">✕</button>
+                    </div>
                   </div>
                 </div>
               {/each}
@@ -681,20 +750,85 @@
   .progress-ring span { display: block; font-size: 1.25rem; font-weight: 700; color: #49b6ea; }
   .progress-ring small { font-size: 10px; color: #4d7a9e; text-transform: uppercase; }
 
-  .listing-grid { display: flex; flex-direction: column; gap: 10px; }
-  .listing-card {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .editor-panel { padding: 1rem; }
+
+  .listing-grid.rich { gap: 12px; }
+  .listing-card.rich {
+    display: grid;
+    grid-template-columns: 72px 1fr auto;
     gap: 12px;
+    align-items: start;
     padding: 12px 14px;
     background: #091525;
     border: 1px solid rgba(20, 62, 136, 0.5);
     border-radius: 10px;
   }
-  .listing-card strong { display: block; font-size: 14px; margin-bottom: 2px; }
-  .listing-card p { margin: 0; font-size: 12px; color: #4d7a9e; }
-  .listing-meta { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+  @media (max-width: 560px) {
+    .listing-card.rich { grid-template-columns: 56px 1fr; }
+    .listing-meta { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; }
+  }
+
+  .listing-thumb {
+    width: 72px;
+    height: 72px;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+
+  .listing-thumb.placeholder {
+    display: grid;
+    place-items: center;
+    background: #070f1f;
+    font-size: 1.75rem;
+  }
+
+  .listing-content strong { display: block; font-size: 14px; margin-bottom: 2px; }
+  .listing-content p { margin: 0; font-size: 12px; color: #4d7a9e; line-height: 1.4; }
+
+  .listing-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+  .tag {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: rgba(59, 130, 246, 0.15);
+    color: #49b6ea;
+  }
+  .tag.highlight { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .mini-chip {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(52, 211, 153, 0.08);
+    color: #6ee7b7;
+    border: 1px solid rgba(52, 211, 153, 0.15);
+  }
+
+  .listing-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .listing-btns { display: flex; align-items: center; gap: 6px; }
+  .text-btn {
+    background: none;
+    border: none;
+    color: #49b6ea;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 4px 6px;
+  }
+  .text-btn:hover { text-decoration: underline; }
+
   .price { font-weight: 700; color: #34d399; font-size: 14px; }
 
   .icon-btn {

@@ -1,11 +1,31 @@
 export type BusinessType = 'product' | 'service'
 
+export interface ListingPayload {
+  name: string
+  price: number
+  description: string
+  highlights?: string
+  listing_type?: BusinessType
+  industry?: string
+  subcategory?: string
+  image_data?: string
+  image_name?: string
+  details?: Record<string, string>
+}
+
 export interface SellerProduct {
   id: string
   shop_id: string
   name: string
   price: number
   description: string
+  highlights?: string | null
+  listing_type?: string | null
+  industry?: string | null
+  subcategory?: string | null
+  image_data?: string | null
+  image_name?: string | null
+  details?: Record<string, string> | null
 }
 
 export interface SellerShop {
@@ -48,10 +68,7 @@ export async function updateShop(
   return data
 }
 
-export async function addListing(
-  shopId: string,
-  listing: { name: string; price: number; description: string }
-): Promise<SellerProduct> {
+export async function addListing(shopId: string, listing: ListingPayload): Promise<SellerProduct> {
   const res = await fetch('/api/products', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -59,6 +76,17 @@ export async function addListing(
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Failed to add listing')
+  return data
+}
+
+export async function updateListing(productId: string, listing: ListingPayload): Promise<SellerProduct> {
+  const res = await fetch(`/api/products/${productId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(listing)
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Failed to update listing')
   return data
 }
 

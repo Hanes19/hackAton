@@ -9,6 +9,36 @@ function getSupabase() {
   return createClient(url, key)
 }
 
+function buildListingPayload(body) {
+  const {
+    shop_id,
+    name,
+    price,
+    description,
+    highlights,
+    listing_type,
+    industry,
+    subcategory,
+    image_data,
+    image_name,
+    details
+  } = body
+
+  return {
+    shop_id,
+    name: name?.trim(),
+    price: Number(price) || 0,
+    description: description?.trim() || '',
+    highlights: highlights?.trim() || null,
+    listing_type: listing_type === 'service' ? 'service' : 'product',
+    industry: industry || null,
+    subcategory: subcategory || null,
+    image_data: image_data || null,
+    image_name: image_name?.trim() || null,
+    details: details && typeof details === 'object' ? details : {}
+  }
+}
+
 router.get('/shop/:shopId', async (req, res) => {
   const { data, error } = await getSupabase()
     .from('products')
@@ -21,22 +51,27 @@ router.get('/shop/:shopId', async (req, res) => {
 })
 
 router.post('/', async (req, res) => {
-  const { shop_id, name, price, description } = req.body
+  const payload = buildListingPayload(req.body)
 
-  if (!shop_id || !name?.trim()) {
+  if (!payload.shop_id || !payload.name) {
     return res.status(400).json({ error: 'Shop ID and listing name are required.' })
   }
 
+  const { data, error } = await getSupabase().from('products').insert([payload]).select().single()
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.json(data)
+})
+
+router.patch('/:id', async (req, res) => {
+  const { shop_id: _shopId, ...rest } = req.body
+  const payload = buildListingPayload({ ...rest, shop_id: 'keep' })
+  delete payload.shop_id
+
   const { data, error } = await getSupabase()
     .from('products')
-    .insert([
-      {
-        shop_id,
-        name: name.trim(),
-        price: Number(price) || 0,
-        description: description?.trim() || ''
-      }
-    ])
+    .update(payload)
+    .eq('id', req.params.id)
     .select()
     .single()
 
