@@ -3,6 +3,9 @@
   import { page } from '$app/stores'
   import { sendAssistantMessage, type ChatMessage } from '$lib/assistant'
 
+  export const SIDEBAR_WIDTH_OPEN = 360
+  export const SIDEBAR_WIDTH_COLLAPSED = 52
+
   let open = $state(false)
   let input = $state('')
   let loading = $state(false)
@@ -65,13 +68,22 @@
 
   function navigate(url: string) {
     goto(url)
-    open = false
   }
 </script>
 
-<div class="assistant-root">
+<svelte:window
+  onkeydown={(e) => {
+    if (e.key === 'Escape' && open) open = false
+  }}
+/>
+
+{#if open}
+  <button class="mobile-backdrop" onclick={() => (open = false)} aria-label="Close assistant"></button>
+{/if}
+
+<aside class="assistant-sidebar" class:open aria-label="Budol Assistant panel">
   {#if open}
-    <div class="chat-panel" role="dialog" aria-label="Budol Assistant">
+    <div class="chat-panel">
       <header class="chat-header">
         <div class="header-info">
           <span class="avatar">🤖</span>
@@ -80,7 +92,9 @@
             <span class="status">Online · Free AI</span>
           </div>
         </div>
-        <button class="close-btn" onclick={() => (open = false)} aria-label="Close chat">✕</button>
+        <button class="collapse-btn" onclick={() => (open = false)} aria-label="Collapse assistant">
+          <span class="collapse-icon">›</span>
+        </button>
       </header>
 
       <div class="messages">
@@ -126,78 +140,91 @@
         </button>
       </div>
     </div>
+  {:else}
+    <button class="expand-rail" onclick={() => (open = true)} aria-label="Open Budol Assistant">
+      <span class="rail-icon">💬</span>
+      <span class="rail-label">AI</span>
+    </button>
   {/if}
-
-  <button
-    class="toggle-btn"
-    class:open
-    onclick={() => (open = !open)}
-    aria-label={open ? 'Close Budol Assistant' : 'Open Budol Assistant'}
-  >
-    {open ? '✕' : '💬'}
-  </button>
-</div>
+</aside>
 
 <style>
-  .assistant-root {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    z-index: 10000;
+  .assistant-sidebar {
+    --sidebar-width: 52px;
+    flex-shrink: 0;
+    width: var(--sidebar-width);
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    z-index: 9000;
+    background: #0c1a35;
+    border-left: 1px solid rgba(73, 182, 234, 0.2);
+    display: flex;
+    flex-direction: column;
+    transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    overflow: hidden;
   }
 
-  .toggle-btn {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    border: none;
-    background: linear-gradient(135deg, #e84c3d, #c0392b);
-    color: white;
-    font-size: 22px;
-    cursor: pointer;
-    box-shadow: 0 6px 24px rgba(232, 76, 61, 0.45);
-    transition: transform 0.2s, box-shadow 0.2s;
+  .assistant-sidebar.open {
+    --sidebar-width: 360px;
+  }
+
+  .mobile-backdrop {
+    display: none;
+  }
+
+  .expand-rail {
+    flex: 1;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 8px;
+    width: 100%;
+    border: none;
+    background: linear-gradient(180deg, #0c1a35 0%, #091525 100%);
+    color: white;
+    cursor: pointer;
+    padding: 16px 0;
+    transition: background 0.2s;
   }
 
-  .toggle-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 8px 28px rgba(232, 76, 61, 0.55);
+  .expand-rail:hover {
+    background: linear-gradient(180deg, #112040 0%, #0c1a35 100%);
   }
 
-  .toggle-btn.open {
-    background: #333;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-    font-size: 16px;
+  .rail-icon {
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .rail-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #49b6ea;
+    text-transform: uppercase;
   }
 
   .chat-panel {
-    position: absolute;
-    bottom: 68px;
-    right: 0;
-    width: min(380px, calc(100vw - 32px));
-    height: min(520px, calc(100vh - 120px));
-    background: #0c1a35;
-    border: 1px solid rgba(73, 182, 234, 0.25);
-    border-radius: 16px;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
-    animation: slideUp 0.25s ease;
+    height: 100%;
+    min-width: 360px;
+    animation: panelIn 0.22s ease;
   }
 
-  @keyframes slideUp {
+  @keyframes panelIn {
     from {
       opacity: 0;
-      transform: translateY(12px);
+      transform: translateX(12px);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      transform: translateX(0);
     }
   }
 
@@ -208,6 +235,7 @@
     padding: 14px 16px;
     background: #091525;
     border-bottom: 1px solid rgba(20, 62, 136, 0.5);
+    flex-shrink: 0;
   }
 
   .header-info {
@@ -231,19 +259,29 @@
     color: #49b6ea;
   }
 
-  .close-btn {
-    background: transparent;
-    border: none;
+  .collapse-btn {
+    background: rgba(73, 182, 234, 0.1);
+    border: 1px solid rgba(73, 182, 234, 0.25);
     color: #84b9d5;
     cursor: pointer;
-    font-size: 16px;
-    padding: 4px 8px;
-    border-radius: 4px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
   }
 
-  .close-btn:hover {
-    background: rgba(255, 255, 255, 0.05);
+  .collapse-btn:hover {
+    background: rgba(73, 182, 234, 0.2);
     color: white;
+  }
+
+  .collapse-icon {
+    font-size: 18px;
+    line-height: 1;
+    font-weight: 700;
   }
 
   .messages {
@@ -253,6 +291,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    min-height: 0;
   }
 
   .msg-row {
@@ -320,6 +359,7 @@
     padding: 0 12px 8px;
     overflow-x: auto;
     scrollbar-width: none;
+    flex-shrink: 0;
   }
 
   .quick-row::-webkit-scrollbar {
@@ -354,6 +394,7 @@
     padding: 12px;
     border-top: 1px solid rgba(20, 62, 136, 0.5);
     background: #091525;
+    flex-shrink: 0;
   }
 
   .input-row textarea {
@@ -395,5 +436,44 @@
 
   .send-btn:not(:disabled):hover {
     background: #2563eb;
+  }
+
+  @media (max-width: 768px) {
+    .assistant-sidebar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100vh;
+      height: 100dvh;
+      box-shadow: -8px 0 32px rgba(0, 0, 0, 0.35);
+    }
+
+    .assistant-sidebar:not(.open) {
+      --sidebar-width: 44px;
+    }
+
+    .assistant-sidebar.open {
+      --sidebar-width: min(360px, 100vw);
+    }
+
+    .mobile-backdrop {
+      display: block;
+      position: fixed;
+      inset: 0;
+      z-index: 8999;
+      background: rgba(0, 0, 0, 0.45);
+      border: none;
+      cursor: pointer;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
   }
 </style>
