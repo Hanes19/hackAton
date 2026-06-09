@@ -30,7 +30,11 @@ router.get('/user/:userId', async (req, res) => {
 // get all shops (public: approved only; ?all=true for admin)
 router.get('/', async (req, res) => {
   const showAll = req.query.all === 'true'
-  let query = getSupabase().from('shops').select(showAll ? '*' : PUBLIC_SHOP_FIELDS)
+  const listFields = showAll
+    ? '*'
+    : `${PUBLIC_SHOP_FIELDS}, products(id, name, price, image_data, listing_type, subcategory, highlights)`
+
+  let query = getSupabase().from('shops').select(listFields)
 
   if (!showAll) {
     query = query.or('verification_status.eq.approved,verification_status.is.null')
