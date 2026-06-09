@@ -52,7 +52,7 @@
 
   <!-- Navbar -->
   <header style="padding: 0.75rem 1.5rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-shrink: 0;">
-    <h1 style="font-size: 1.2rem; font-weight: 600; white-space: nowrap;">🗺 LocalMarket</h1>
+   <h1 style="font-size: 1.2rem; font-weight: 600; white-space: nowrap;">Budol Map</h1>
     <input bind:value={search} placeholder="Search shops or categories..." style="flex: 1; max-width: 400px;" />
     <div style="display: flex; gap: 8px; align-items: center;">
       <a href="/register" style="font-size: 13px; background: #1a1a1a; color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; white-space: nowrap;">+ Add shop</a>

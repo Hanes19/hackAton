@@ -114,7 +114,7 @@
 
 <div style="min-height: 100vh; background: #f9f9f9;">
   <header style="background: white; border-bottom: 1px solid #eee; padding: 0.75rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-    <h1 style="font-size: 1rem; font-weight: 600;">🏪 Seller Dashboard</h1>
+    <h1 style="font-size: 1rem; font-weight: 600;">Budol Map — Seller Dashboard</h1>
     <a href="/" style="font-size: 13px; color: #666; text-decoration: none;">← Back to map</a>
   </header>
 
