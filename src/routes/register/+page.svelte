@@ -10,6 +10,18 @@
     type PermitVerificationResult
   } from '$lib/lgu'
   import type { User } from '@supabase/supabase-js'
+  import LocationPicker from '$lib/LocationPicker.svelte'
+
+  const lguCenters: Record<string, { lat: number; lng: number }> = {
+    'Valencia City': { lat: 7.9064, lng: 125.0948 },
+    'Malaybalay City': { lat: 8.1574, lng: 125.1277 },
+    Maramag: { lat: 7.7631, lng: 125.0053 },
+    'Manolo Fortich': { lat: 8.3728, lng: 124.8661 },
+    Quezon: { lat: 7.7303, lng: 125.0972 },
+    'Don Carlos': { lat: 7.6778, lng: 125.0056 },
+    Libona: { lat: 8.3361, lng: 124.7367 },
+    Baungon: { lat: 8.2333, lng: 124.7167 }
+  }
 
   const steps = ['Business Info', 'LGU Permit', 'Valid ID', 'Review'] as const
   let step = $state(0)
@@ -25,6 +37,10 @@
   let lguMunicipality = $state('Valencia City')
   let lat = $state(7.9064)
   let lng = $state(125.0948)
+  let locationPinned = $state(false)
+
+  let mapCenterLat = $derived(lguCenters[lguMunicipality]?.lat ?? 7.9064)
+  let mapCenterLng = $derived(lguCenters[lguMunicipality]?.lng ?? 125.0948)
 
   let permitNumber = $state('')
   let permitVerifying = $state(false)
@@ -58,7 +74,7 @@
 
   function canAdvance(): boolean {
     if (step === 0) {
-      return !!(ownerName.trim() && shopName.trim() && address.trim() && lguMunicipality)
+      return !!(ownerName.trim() && shopName.trim() && address.trim() && lguMunicipality && locationPinned)
     }
     if (step === 1) {
       return permitResult?.verified === true
@@ -124,6 +140,7 @@
       if (step === 1) error = 'Verify your business permit with the LGU before continuing.'
       else if (step === 2) error = 'Upload a valid ID and confirm the attestation.'
       else error = 'Please complete all required fields.'
+      if (step === 0 && !locationPinned) error = 'Pin your shop location on the map before continuing.'
       return
     }
     if (step < steps.length - 1) step++
@@ -255,17 +272,16 @@
               <textarea id="description" bind:value={description} rows="3" placeholder="What products or services do you offer?"></textarea>
             </div>
 
-            <div class="field-row">
-              <div class="field">
-                <label for="lat">Latitude</label>
-                <input id="lat" type="number" bind:value={lat} step="0.0001" />
-              </div>
-              <div class="field">
-                <label for="lng">Longitude</label>
-                <input id="lng" type="number" bind:value={lng} step="0.0001" />
-              </div>
+            <div class="field">
+              <span class="field-label">Shop location on map <span class="req">*</span></span>
+              <LocationPicker
+                bind:lat
+                bind:lng
+                bind:pinned={locationPinned}
+                centerLat={mapCenterLat}
+                centerLng={mapCenterLng}
+              />
             </div>
-            <span class="hint">Tip: right-click on Google Maps → "What's here?" to get coordinates. Default is Valencia City center.</span>
           </div>
 
         {:else if step === 1}
@@ -397,6 +413,7 @@
                 <dt>Shop</dt><dd>{shopName}</dd>
                 <dt>Category</dt><dd>{category}</dd>
                 <dt>Address</dt><dd>{address}</dd>
+                <dt>Map pin</dt><dd>{lat.toFixed(4)}, {lng.toFixed(4)}</dd>
                 <dt>LGU</dt><dd>{lguMunicipality}</dd>
               </dl>
             </section>
@@ -551,7 +568,7 @@
   @media (max-width: 520px) { .field-row { grid-template-columns: 1fr; } }
 
   .field { display: flex; flex-direction: column; gap: 6px; }
-  label { font-size: 12px; font-weight: 500; color: #6eb3da; text-transform: uppercase; letter-spacing: 0.02em; }
+  label, .field-label { font-size: 12px; font-weight: 500; color: #6eb3da; text-transform: uppercase; letter-spacing: 0.02em; }
   .req { color: #e84c3d; }
   input, select, textarea {
     width: 100%;
