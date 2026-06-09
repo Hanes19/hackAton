@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
   import { supabase } from '$lib/supabase'
   import { getUser } from '$lib/auth'
+  import { onMount, tick } from 'svelte'
 
   interface Product {
     id: string
@@ -39,6 +39,7 @@
   let productDesc = $state('')
   let saving = $state(false)
   let message = $state('')
+  let pickerMap: unknown = null
 
   async function registerShop() {
   registering = true
@@ -78,7 +79,37 @@
   console.log('shop data:', data)
   shop = data
   loading = false
+
+  // init picker map after render
+  await tick()
+  initPickerMap()
 })
+
+async function initPickerMap() {
+  const el = document.getElementById('picker-map')
+  if (!el || pickerMap) return
+
+  const L = await import('leaflet')
+  await import('leaflet/dist/leaflet.css')
+
+  const map = L.map(el).setView([8.1575, 125.1278], 12)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(map)
+
+  let marker: ReturnType<typeof L.marker> | null = null
+
+  map.on('click', (e: L.LeafletMouseEvent) => {
+    shopLat = parseFloat(e.latlng.lat.toFixed(6))
+    shopLng = parseFloat(e.latlng.lng.toFixed(6))
+
+    if (marker) marker.remove()
+    marker = L.marker([shopLat, shopLng]).addTo(map)
+      .bindPopup('Your shop location').openPopup()
+  })
+
+  pickerMap = map
+}
 
   async function addProduct() {
   if (!shop || !shop.id) return
@@ -152,17 +183,14 @@
         <label for="saddr" style="font-size: 13px; color: #666; display: block; margin-bottom: 4px;">Address</label>
         <input id="saddr" bind:value={shopAddress} placeholder="e.g. Malaybalay City, Bukidnon" style="width: 100%;" />
       </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-        <div>
-          <label for="slat" style="font-size: 13px; color: #666; display: block; margin-bottom: 4px;">Latitude</label>
-          <input id="slat" type="number" bind:value={shopLat} step="0.0001" style="width: 100%;" />
-        </div>
-        <div>
-          <label for="slng" style="font-size: 13px; color: #666; display: block; margin-bottom: 4px;">Longitude</label>
-          <input id="slng" type="number" bind:value={shopLng} step="0.0001" style="width: 100%;" />
-        </div>
+      <div>
+        <label style="font-size: 13px; color: #666; display: block; margin-bottom: 6px;">📍 Pin your shop location</label>
+        <p style="font-size: 12px; color: #999; margin-bottom: 8px;">Click anywhere on the map to set your shop's location.</p>
+        <div id="picker-map" style="height: 280px; border-radius: 10px; border: 1px solid #ddd; overflow: hidden;"></div>
+        {#if shopLat && shopLng}
+          <p style="font-size: 12px; color: #10b981; margin-top: 6px;">✓ Location set: {shopLat.toFixed(4)}, {shopLng.toFixed(4)}</p>
+        {/if}
       </div>
-      <p style="font-size: 12px; color: #999;">Tip: right-click on Google Maps → "What's here?" to get coordinates.</p>
 
       {#if registerError}
         <div style="background: #fde8e8; border-radius: 8px; padding: 0.75rem; color: #9b2c2c; font-size: 13px;">{registerError}</div>

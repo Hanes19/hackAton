@@ -120,4 +120,4 @@
     Budol Map — Empowering Local Trade in Bukidnon • Built for the community
   </footer>
 
-</div>
+</div> 
