@@ -1,14 +1,9 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import type { Map, Marker, GeoJSON } from 'leaflet'
+  import type { GeoJsonObject } from 'geojson'
 
   interface Shop { id: string; name: string; category: string; lat: number; lng: number }
-  
-  // NEW: Explicit TypeScript interface to replace 'any'
-  interface RouteGeometry {
-    type: string;
-    coordinates: number[][];
-  }
 
   let { 
     shops = [], 
@@ -20,7 +15,7 @@
     shops: Shop[], 
     selectedShopId?: string | null, 
     userLocation: { lat: number; lng: number } | null,
-    routeGeometry: RouteGeometry | null,
+    routeGeometry: GeoJsonObject | null, // Perfectly typed!
     isNavigating?: boolean
   } = $props()
 
@@ -51,7 +46,6 @@
 
   $effect(() => { void shops; addMarkers() })
 
-  // Live GPS Marker & Camera Follow Logic
   $effect(() => {
     if (map && L && userLocation) {
       if (userMarker) userMarker.remove()
@@ -69,13 +63,13 @@
     }
   })
 
-  // Routing Path Logic
   $effect(() => {
     if (map && L) {
       if (routeLayer) routeLayer.remove()
       
       if (routeGeometry) {
-        routeLayer = L.geoJSON(routeGeometry as any, {
+        // No more 'as any' needed!
+        routeLayer = L.geoJSON(routeGeometry, {
           style: { color: '#3b82f6', weight: 6, opacity: 0.8, lineCap: 'round', lineJoin: 'round' }
         }).addTo(map)
 

@@ -4,7 +4,6 @@
 
 <div style="min-height: 100vh; font-family: 'Segoe UI', sans-serif; background: #fff;">
 
-  <!-- Navbar -->
   <header style="position: sticky; top: 0; z-index: 100; background: white; border-bottom: 1px solid #eee; padding: 0.75rem 2rem; display: flex; justify-content: space-between; align-items: center;">
     <div style="display: flex; align-items: center; gap: 10px;">
       <img src="/logo.png" alt="Budol Map" style="height: 40px; width: 40px; object-fit: contain;" />
@@ -18,16 +17,12 @@
     </nav>
   </header>
 
-  <!-- Hero -->
   <div style="position: relative; min-height: 85vh; display: flex; align-items: center; overflow: hidden; background: url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1400&q=80') center/cover no-repeat;">
 
-    <!-- Dark overlay -->
     <div style="position: absolute; inset: 0; background: rgba(10, 20, 40, 0.78);"></div>
 
-    <!-- Background text -->
     <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0.04; font-size: 12vw; font-weight: 900; color: white; letter-spacing: -2px; pointer-events: none; user-select: none;">BUKIDNON</div>
 
-    <!-- Left content -->
     <div style="position: relative; z-index: 2; flex: 1; padding: 4rem 3rem 4rem 5vw; max-width: 55%;">
       <div style="display: inline-block; background: rgba(232, 76, 61, 0.15); border: 1px solid rgba(232, 76, 61, 0.3); color: #e84c3d; font-size: 12px; padding: 4px 12px; border-radius: 20px; margin-bottom: 1.5rem; letter-spacing: 0.08em; font-weight: 500;">
         🗺 Valencia City & Bukidnon
@@ -50,7 +45,6 @@
       </div>
     </div>
 
-    <!-- Right phone mockup -->
     <div style="position: relative; z-index: 2; flex: 1; display: flex; justify-content: center; align-items: center; padding: 2rem;">
       <div style="width: 260px; height: 520px; background: #1a1a1a; border-radius: 36px; border: 6px solid #333; box-shadow: 0 30px 80px rgba(0,0,0,0.5); overflow: hidden; position: relative;">
         <div style="position: absolute; top: 0; left: 0; right: 0; background: #1a1a1a; height: 28px; display: flex; align-items: center; justify-content: center; z-index: 1;">
@@ -64,7 +58,6 @@
 
   </div>
 
-  <!-- Features -->
   <div style="background: #f9f9f9; padding: 4rem 2rem;">
     <h2 style="text-align: center; font-size: 1.5rem; font-weight: 700; margin-bottom: 2.5rem; color: #1a1a1a;">Why Budol Map?</h2>
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; max-width: 900px; margin: 0 auto;">
@@ -82,7 +75,6 @@
     </div>
   </div>
 
-  <!-- Local Products Section -->
   <div style="padding: 4rem 2rem; max-width: 900px; margin: 0 auto;">
     <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; color: #1a1a1a;">Featured from Bukidnon</h2>
     <p style="font-size: 13px; color: #999; margin-bottom: 2rem;">Discover what local sellers have to offer</p>
@@ -92,7 +84,14 @@
         { emoji: '🧶', name: 'Handcrafted Weaves', location: 'Lantapan', category: 'Clothing' },
         { emoji: '🍍', name: 'Del Monte Pineapple Products', location: 'Manolo Fortich', category: 'Food' },
       ] as product (product.name)}
-        <div style="border-radius: 12px; overflow: hidden; border: 1px solid #eee; cursor: pointer;" onclick={() => goto('/map')}>
+        
+        <div 
+          style="border-radius: 12px; overflow: hidden; border: 1px solid #eee; cursor: pointer; transition: transform 0.2s;" 
+          onclick={() => goto('/map')}
+          role="button"
+          tabindex="0"
+          onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') goto('/map') }}
+        >
           <div style="height: 140px; background: linear-gradient(135deg, #f0f4ff, #e8f4f0); display: flex; align-items: center; justify-content: center; font-size: 4rem;">
             {product.emoji}
           </div>
@@ -106,7 +105,6 @@
     </div>
   </div>
 
-  <!-- CTA -->
   <div style="background: #e84c3d; padding: 4rem 2rem; text-align: center;">
     <h2 style="font-size: 1.8rem; font-weight: 800; color: white; margin-bottom: 0.75rem;">Ready to sell on Budol Map?</h2>
     <p style="color: rgba(255,255,255,0.8); margin-bottom: 2rem; font-size: 15px;">Join hundreds of local sellers and reach more buyers in Bukidnon.</p>
@@ -115,9 +113,8 @@
     </button>
   </div>
 
-  <!-- Footer -->
   <footer style="background: #1a1a1a; color: #666; padding: 1.5rem 2rem; text-align: center; font-size: 12px;">
     Budol Map — Empowering Local Trade in Bukidnon • Built for the community
   </footer>
 
-</div> 
+</div>

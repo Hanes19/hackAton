@@ -4,11 +4,18 @@
   import MapView from '$lib/MapView.svelte'
   import { getUser, logout } from '$lib/auth'
   import type { User } from '@supabase/supabase-js'
+  import type { GeoJsonObject } from 'geojson'
 
   interface Shop { id: string; name: string; category: string; lat: number; lng: number; address: string; description: string }
-  
-  // Explicit Type for Route Geometry
-  interface RouteGeometry { type: string; coordinates: number[][] }
+
+  // NEW: Define the shape of the OSRM API response to completely avoid 'any'
+  interface OSRMResponse {
+    routes: {
+      geometry: GeoJsonObject;
+      distance: number;
+      duration: number;
+    }[]
+  }
 
   let shops = $state<Shop[]>([])
   let search = $state('')
@@ -22,10 +29,10 @@
   // Live Tracking States
   let trackingLoading = $state(false)
   let isNavigating = $state(false)
-  let watchId: number | null = null
+  let watchId = $state<number | null>(null)
 
-  // Route Geometry States explicitly typed to clear 'any' warning
-  let routeGeometry = $state<RouteGeometry | null>(null)
+  // PERFECTLY TYPED: Route Geometry States
+  let routeGeometry = $state<GeoJsonObject | null>(null)
   let routeDistance = $state<number | null>(null) 
   let routeEta = $state<number | null>(null)
   let isRouting = $state(false)
@@ -50,7 +57,7 @@
       
       fetch(url)
         .then(res => res.json())
-        .then(data => {
+        .then((data: OSRMResponse) => { // Cast the response to our strict interface
           if (data.routes && data.routes.length > 0) {
             const route = data.routes[0];
             routeGeometry = route.geometry;
