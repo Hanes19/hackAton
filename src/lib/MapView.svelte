@@ -29,10 +29,17 @@
   let routeLayer: GeoJSON | null = null
   let lastTrigger = 0
 
-  function addMarkers() {
+function addMarkers() {
     if (!map || !L) return
     Object.values(markers).forEach(m => m.remove())
     markers = {}
+
+    // If no shops match the filter, bail out early
+    if (shops.length === 0) return
+
+    // 1. Create an empty bounding box
+    const bounds = L!.latLngBounds([])
+
     shops.forEach((shop) => {
       const m = L!.marker([shop.lat, shop.lng])
         .addTo(map!)
@@ -44,7 +51,17 @@
           </div>
         `)
       markers[shop.id] = m
+
+      // 2. Expand the bounding box to include this pin's exact location
+      bounds.extend([shop.lat, shop.lng])
     })
+
+    // 3. Elegantly frame the remaining pins! 
+    // (We only want to do this if we aren't currently focused on a specific shop or navigating)
+    if (!selectedShopId && !isNavigating) {
+      // pad by 50px so pins don't get cut off at the very edge of the screen
+      map!.flyToBounds(bounds, { padding: [50, 50], animate: true, duration: 1.2 })
+    }
   }
 
   $effect(() => { void shops; addMarkers() })
@@ -94,7 +111,14 @@
       else if (selectedShopId && markers[selectedShopId] && !isNavigating) {
         const shop = shops.find(s => s.id === selectedShopId)
         if (shop) {
-          map.flyTo([shop.lat, shop.lng], 16, { animate: true, duration: 1.2 })
+          const zoomLevel = 16;
+          // Calculate the offset so the pin isn't hidden behind the bottom sheet
+          const targetLatLng = L!.latLng(shop.lat, shop.lng);
+          const targetPoint = map!.project(targetLatLng, zoomLevel);
+          targetPoint.y -= 160; // Shifts the camera target down by 160px
+          const offsetLatLng = map!.unproject(targetPoint, zoomLevel);
+
+          map!.flyTo(offsetLatLng, zoomLevel, { animate: true, duration: 1.2 })
           markers[selectedShopId].openPopup()
         }
       }

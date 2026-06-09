@@ -35,6 +35,9 @@
   let routeDistance = $state<number | null>(null) 
   let routeEta = $state<number | null>(null)
   let isRouting = $state(false)
+  let panelOffsetY = $state(0)
+  let startY = $state(0)
+  let isDragging = $state(false)
 
   const categories = ['All', 'Food', 'Clothing', 'Electronics', 'Services', 'Health & Beauty']
 
@@ -75,10 +78,36 @@
     ])
     shops = shopsRes
     user = currentUser
-
-    // Ask for location on load using the new robust function
-    handleGpsClick()
   })
+
+  function handleTouchStart(e: TouchEvent | MouseEvent) {
+    startY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    isDragging = true;
+  }
+
+  function handleTouchMove(e: TouchEvent | MouseEvent) {
+    if (!isDragging) return;
+    const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const diff = currentY - startY;
+    if (diff > 0) panelOffsetY = diff; // Only allow dragging downwards
+  }
+
+  function handleTouchEnd() {
+    isDragging = false;
+    if (panelOffsetY > 120) {
+      focusedShopId = null; // Close panel if dragged down far enough
+    }
+    panelOffsetY = 0; // Snap back if not dragged far enough
+  }
+
+  // Generate dynamic placeholder images based on the shop ID
+  function getShopImages(shopId: string) {
+    return [
+      `https://picsum.photos/seed/${shopId}A/200/150`,
+      `https://picsum.photos/seed/${shopId}B/200/150`,
+      `https://picsum.photos/seed/${shopId}C/200/150`
+    ];
+  }
 
   // THE FIX: Bulletproof GPS locking mechanism
   function handleGpsClick() {
@@ -149,10 +178,20 @@
   </header>
 
   <div class="explorer-content">
-    <aside class="feed-sidebar">
+    <aside class="feed-sidebar" class:nav-hidden={isNavigating}>
       <div class="filter-bar">
         {#each categories as cat (cat)}
-          <button onclick={() => selectedCategory = cat} class="pill" class:active={selectedCategory === cat}>{cat}</button>
+          <button 
+            class="pill" 
+            class:active={selectedCategory === cat}
+            onclick={() => { 
+              selectedCategory = cat; 
+              focusedShopId = null; // Dismiss the bottom sheet
+              isNavigating = false; // Stop navigation if active
+            }} 
+          >
+            {cat}
+          </button>
         {/each}
       </div>
 
@@ -184,60 +223,74 @@
         {trackingLoading ? '⌛' : '🎯'}
       </button>
 
-      {#if selectedShop}
-  <div class="shop-details-panel">
-    <div class="drag-handle"></div>
-
-    <div class="panel-header">
-      <h2 class="shop-title">{selectedShop.name}</h2>
-      <p class="shop-subtitle">{selectedShop.category} • {selectedShop.address || 'Bukidnon'}</p>
-    </div>
-
-    <div class="image-gallery">
-      <div class="mock-img">🏪</div>
-      <div class="mock-img">📸</div>
-      <div class="mock-img">✨</div>
-      <div class="mock-img">📦</div>
-    </div>
-
-    {#if userLocation}
-      <div class="routing-metrics-row">
-        <div class="metric-primary">
-          <span class="eta">
-            {#if isRouting} ... {:else if routeEta !== null && !isNaN(routeEta)} {routeEta} min {:else} -- {/if}
-          </span>
-          <span class="distance">
-            {routeDistance !== null && !isNaN(routeDistance) ? `${routeDistance.toFixed(1)} km` : '...'}
-          </span>
-        </div>
-
-        <div class="ride-selector">
-          <button class="ride-btn" class:active={travelMode === 'car'} onclick={() => travelMode = 'car'}>🚗</button>
-          <button class="ride-btn" class:active={travelMode === 'motorcycle'} onclick={() => travelMode = 'motorcycle'}>🏍️</button>
-          <button class="ride-btn" class:active={travelMode === 'walking'} onclick={() => travelMode = 'walking'}>🚶</button>
-        </div>
+  {#if selectedShop}
+    <div 
+      class="shop-details-panel"
+      role="dialog"
+      aria-label="Shop Details"
+      tabindex="-1"
+      style="transform: translateY({panelOffsetY}px); transition: {isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'};"
+      ontouchstart={handleTouchStart}
+      ontouchmove={handleTouchMove}
+      ontouchend={handleTouchEnd}
+      onmousedown={handleTouchStart}
+      onmousemove={handleTouchMove}
+      onmouseup={handleTouchEnd}
+      onmouseleave={handleTouchEnd}
+    >
+      <div class="panel-header">
+        <h2 class="shop-title">{selectedShop.name}</h2>
+        <p class="shop-subtitle">{selectedShop.category} • {selectedShop.address || 'Bukidnon'}</p>
       </div>
 
-      <button 
-        class="action-btn" 
-        style="background: {isNavigating ? '#ef4444' : '#3b82f6'};" 
-        onclick={() => { isNavigating = !isNavigating; if (isNavigating) recenterTrigger++; }}
-      >
-        {isNavigating ? '⏹ Stop Navigation' : '▶ Start Navigation'}
-      </button>
-    {:else}
-      <div class="no-gps-state">
-        <p>Enable location tracking to see routes.</p>
-        <button class="btn-primary" onclick={handleGpsClick}>Enable GPS Tracking</button>
-      </div>
-    {/if}
+      {#if !isNavigating}
+        <div class="image-gallery">
+          {#each getShopImages(selectedShop.id) as photo (photo)}
+            <img src={photo} alt="Shop view" class="shop-photo" draggable="false" />
+          {/each}
+        </div>
+      {/if}
 
-    <div class="shop-description-box">
-      <h4>About this location</h4>
-      <p>{selectedShop.description || 'A fantastic local spot offering the best products and services in the area.'}</p>
+      {#if userLocation}
+        <div class="routing-metrics-row" style={isNavigating ? "transform: scale(1.05); margin: 10px 0;" : ""}>
+          <div class="metric-primary">
+            <span class="eta">
+              {#if isRouting} ... {:else if routeEta !== null && !isNaN(routeEta)} {routeEta} min {:else} -- {/if}
+            </span>
+            <span class="distance">
+              {routeDistance !== null && !isNaN(routeDistance) ? `${routeDistance.toFixed(1)} km` : '...'}
+            </span>
+          </div>
+
+          <div class="ride-selector">
+            <button class="ride-btn" class:active={travelMode === 'car'} onclick={() => travelMode = 'car'}>🚗</button>
+            <button class="ride-btn" class:active={travelMode === 'motorcycle'} onclick={() => travelMode = 'motorcycle'}>🏍️</button>
+            <button class="ride-btn" class:active={travelMode === 'walking'} onclick={() => travelMode = 'walking'}>🚶</button>
+          </div>
+        </div>
+
+        <button 
+          class="action-btn" 
+          style="background: {isNavigating ? '#ef4444' : '#3b82f6'};"
+          onclick={() => { isNavigating = !isNavigating; if (isNavigating) recenterTrigger++; else panelOffsetY = 0; }}
+        >
+          {isNavigating ? '⏹ End Route' : '▶ Start Navigation'}
+        </button>
+      {:else}
+        <div class="no-gps-state">
+          <p>Enable location tracking to see routes.</p>
+          <button class="btn-primary" onclick={handleGpsClick}>Enable GPS Tracking</button>
+        </div>
+      {/if}
+
+      {#if !isNavigating}
+        <div class="shop-description-box">
+          <h4>About this location</h4>
+          <p>{selectedShop.description || 'A fantastic local spot offering the best products and services in the area.'}</p>
+        </div>
+      {/if}
     </div>
-  </div>
-{/if}
+  {/if}
     </main>
   </div>
 </div>
@@ -257,7 +310,18 @@
 
   /* Content Shell Structure */
   .explorer-content { display: flex; flex: 1; overflow: hidden; }
-  .feed-sidebar { width: 400px; background: #091525; display: flex; flex-direction: column; border-right: 1px solid rgba(20, 62, 136, 0.6); z-index: 10; flex-shrink: 0; }
+  .feed-sidebar { 
+    width: 400px; background: #091525; display: flex; flex-direction: column; 
+    border-right: 1px solid rgba(20, 62, 136, 0.6); z-index: 10; flex-shrink: 0; 
+    transition: margin-left 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s; /* Added transitions */
+  }
+  
+  /* New class to hide sidebar gracefully */
+  .feed-sidebar.nav-hidden {
+    margin-left: -400px;
+    opacity: 0;
+    pointer-events: none;
+  }
   .filter-bar { display: flex; gap: 8px; padding: 12px 1rem; overflow-x: auto; background: #0c1a35; border-bottom: 1px solid rgba(20, 62, 136, 0.6); scrollbar-width: none; }
   .filter-bar::-webkit-scrollbar { display: none; }
   .pill { background: transparent; border: 1px solid rgba(20, 62, 136, 0.7); color: #4d7a9e; padding: 6px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; white-space: nowrap; }
@@ -296,7 +360,7 @@
   }
   @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-  .drag-handle { width: 40px; height: 5px; background: #2a4b7c; border-radius: 3px; margin: 0 auto 4px; }
+  
   
   .panel-header .shop-title { margin: 0; font-size: 1.4rem; font-weight: 700; color: #fff; line-height: 1.2; }
   .panel-header .shop-subtitle { margin: 4px 0 0; font-size: 0.85rem; color: #84b9d5; }
@@ -304,7 +368,7 @@
   /* Horizontal Scrolling Image Gallery */
   .image-gallery { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
   .image-gallery::-webkit-scrollbar { display: none; }
-  .mock-img { width: 90px; height: 70px; flex-shrink: 0; background: #070f1f; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; border: 1px solid rgba(73, 182, 234, 0.15); box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+  
 
   /* Metrics Row (ETA & Ride Mode) */
   .routing-metrics-row { display: flex; align-items: center; justify-content: space-between; background: #091525; padding: 8px 12px; border-radius: 12px; border: 1px solid rgba(20, 62, 136, 0.5); }
@@ -329,4 +393,7 @@
   .ride-btn { flex: 1; background: transparent; border: none; color: #84b9d5; padding: 6px; border-radius: 4px; font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
   .ride-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
   .ride-btn.active { background: #3b82f6; color: white; font-weight: 600; }
+
+  .shop-photo { height: 100px; width: 140px; object-fit: cover; border-radius: 10px; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.3); pointer-events: none; }
+  
 </style>
