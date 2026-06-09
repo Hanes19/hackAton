@@ -127,11 +127,9 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    background: #070f1f;
-    background-image:
-      radial-gradient(ellipse 60% 50% at 50% 0%, rgba(13, 88, 176, 0.18) 0%, transparent 70%),
-      radial-gradient(ellipse 40% 30% at 80% 80%, rgba(73, 182, 234, 0.07) 0%, transparent 60%);
-    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    background: var(--surface-deepest);
+    background-image: var(--gradient-page-dark);
+    font-family: var(--font-sans);
   }
 
   .page-body {
@@ -147,8 +145,8 @@
   .card {
     width: 100%;
     max-width: 400px;
-    background: #0c1a35;
-    border: 1px solid rgba(73, 182, 234, 0.15);
+    background: var(--surface-darker);
+    border: 1px solid var(--border);
     border-radius: 16px;
     padding: 2.5rem 2rem;
     box-shadow:
@@ -167,8 +165,8 @@
   .brand-icon {
     width: 34px;
     height: 34px;
-    background: rgba(73, 182, 234, 0.1);
-    border: 1px solid rgba(73, 182, 234, 0.25);
+    background: var(--primary-light);
+    border: 1px solid var(--border-strong);
     border-radius: 8px;
     display: grid;
     place-items: center;
@@ -228,7 +226,7 @@
   input {
     width: 100%;
     padding: 10px 12px 10px 36px;
-    background: #091525;
+    background: var(--surface-deepest);
     border: 1px solid #143e88;
     border-radius: 8px;
     color: #e8f4fc;
@@ -242,11 +240,11 @@
     color: #2d5580;
   }
   input:focus {
-    border-color: #49b6ea;
-    box-shadow: 0 0 0 3px rgba(121, 224, 233, 0.12), 0 0 16px rgba(73, 182, 234, 0.1);
+    border-color: var(--accent-warm);
+    box-shadow: 0 0 0 3px var(--primary-light);
   }
   .input-wrap:focus-within .input-icon {
-    color: #49b6ea;
+    color: var(--accent-warm);
   }
 
   /* Error */
@@ -271,7 +269,7 @@
     width: 100%;
     padding: 11px;
     margin-top: 6px;
-    background: linear-gradient(135deg, #0d58b0 0%, #49b6ea 100%);
+    background: var(--gradient-brand);
     border: none;
     border-radius: 8px;
     color: #fff;
@@ -286,7 +284,7 @@
   .submit-btn:hover:not(:disabled) {
     opacity: 0.9;
     transform: translateY(-1px);
-    box-shadow: 0 6px 28px rgba(73, 182, 234, 0.35);
+    box-shadow: var(--shadow-md);
   }
   .submit-btn:active:not(:disabled) {
     transform: translateY(0);
@@ -332,7 +330,7 @@
     margin: 0;
   }
   .footer-text a {
-    color: #49b6ea;
+    color: var(--accent-warm);
     text-decoration: none;
     font-weight: 500;
   }

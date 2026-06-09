@@ -8,7 +8,7 @@
   import { loginUrl, registerUserUrl } from '$lib/navigation'
 
   let {
-    variant = 'dark',
+    variant = 'light',
     center
   }: {
     variant?: 'light' | 'dark'
@@ -102,14 +102,15 @@
     top: 0;
   }
 
-  .navbar.dark {
-    background: #0c1a35;
-    border-bottom: 1px solid rgba(73, 182, 234, 0.15);
+  .navbar.light {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
   }
 
-  .navbar.light {
-    background: #fff;
-    border-bottom: 1px solid #eee;
+  .navbar.dark {
+    background: var(--text-dark);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .brand {
@@ -129,15 +130,15 @@
   .brand-text {
     font-size: 1.1rem;
     font-weight: 700;
-    color: #e8f4fc;
+    color: var(--text-dark);
   }
 
-  .navbar.light .brand-text {
-    color: #1a1a1a;
+  .navbar.dark .brand-text {
+    color: var(--text-on-dark);
   }
 
   .accent {
-    color: #e84c3d;
+    color: var(--budol-orange);
   }
 
   .center {
@@ -158,33 +159,36 @@
     font-weight: 500;
     text-decoration: none;
     padding: 6px 10px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     white-space: nowrap;
-    transition: color 0.15s, background 0.15s;
-  }
-
-  .navbar.dark .nav-link {
-    color: #84b9d5;
-  }
-
-  .navbar.dark .nav-link:hover,
-  .navbar.dark .nav-link.active {
-    color: #fff;
-    background: rgba(73, 182, 234, 0.12);
+    transition:
+      color 0.15s,
+      background 0.15s;
   }
 
   .navbar.light .nav-link {
-    color: #555;
+    color: var(--text-dark);
   }
 
   .navbar.light .nav-link:hover,
   .navbar.light .nav-link.active {
-    color: #e84c3d;
+    color: var(--budol-orange);
+    background: var(--primary-light);
+  }
+
+  .navbar.dark .nav-link {
+    color: var(--text-muted-on-dark);
+  }
+
+  .navbar.dark .nav-link:hover,
+  .navbar.dark .nav-link.active {
+    color: var(--text-on-dark);
+    background: rgba(255, 255, 255, 0.08);
   }
 
   .nav-muted {
     font-size: 13px;
-    color: #4d7a9e;
+    color: var(--text-muted);
     padding: 0 6px;
   }
 
@@ -197,71 +201,57 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    background: var(--bg);
+    color: var(--text-dark);
+    border: 1px solid var(--border);
   }
 
   .navbar.dark .user-chip {
-    background: rgba(73, 182, 234, 0.12);
-    color: #49b6ea;
-    border: 1px solid rgba(73, 182, 234, 0.25);
-  }
-
-  .navbar.light .user-chip {
-    background: #f5f5f5;
-    color: #555;
-    border: 1px solid #eee;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-on-dark);
+    border-color: rgba(255, 255, 255, 0.15);
   }
 
   .btn {
     font-size: 13px;
     font-weight: 600;
     padding: 7px 14px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     text-decoration: none;
     border: none;
     cursor: pointer;
     white-space: nowrap;
     font-family: inherit;
-    transition: opacity 0.15s;
+    transition:
+      background 0.15s,
+      border-color 0.15s,
+      color 0.15s;
   }
 
   .btn-outline {
     background: transparent;
+    border: 1px solid var(--border-strong);
+    color: var(--text-dark);
+  }
+
+  .btn-outline:hover {
+    border-color: var(--budol-orange);
+    color: var(--budol-orange);
   }
 
   .navbar.dark .btn-outline {
-    border: 1px solid rgba(73, 182, 234, 0.3);
-    color: #84b9d5;
-  }
-
-  .navbar.dark .btn-outline:hover {
-    border-color: #49b6ea;
-    color: #fff;
-  }
-
-  .navbar.light .btn-outline {
-    border: 1px solid #ddd;
-    color: #555;
+    border-color: rgba(255, 255, 255, 0.25);
+    color: var(--text-on-dark);
   }
 
   .btn-primary {
-    color: white;
+    background: var(--budol-orange);
+    color: var(--text-inverse);
     border: none;
   }
 
-  .navbar.dark .btn-primary {
-    background: #3b82f6;
-  }
-
-  .navbar.dark .btn-primary:hover {
-    background: #2563eb;
-  }
-
-  .navbar.light .btn-primary {
-    background: #e84c3d;
-  }
-
-  .navbar.light .btn-primary:hover {
-    opacity: 0.9;
+  .btn-primary:hover {
+    background: var(--budol-orange-hover);
   }
 
   @media (max-width: 768px) {

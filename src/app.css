@@ -1,23 +1,149 @@
+/* ── Budol Map design tokens ────────────────────────────────
+   Primary action   --budol-orange / --budol-orange-hover
+   User GPS pin     --pin-blue
+   Shop map pins    --budol-orange
+   Sale badges      --alert-red
+   Cards / header   --bg-card
+   Body copy        --text-dark / --text-muted
+   Map surfaces     --map-land / --map-water / --map-road
+   ───────────────────────────────────────────────────────── */
+
 :root {
-  --bg: #ffffff;
-  --bg2: #f9f9f9;
-  --border: #eeeeee;
-  --text: #1a1a1a;
-  --text2: #666666;
-  --text3: #999999;
+  --budol-orange: #ff5722;
+  --budol-orange-hover: #e64a19;
+  --pin-blue: #2196f3;
+  --alert-red: #f44336;
+  --bg-card: #ffffff;
+  --text-dark: #333333;
+  --text-muted: #757575;
+  --map-land: #4caf50;
+  --map-water: #2196f3;
+  --map-road: #9e9e9e;
+
+  /* Page surfaces */
+  --bg: #f5f5f5;
+  --bg2: #eeeeee;
+  --bg-elevated: var(--bg-card);
+  --bg-inset: #fafafa;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.14);
+  --text: var(--text-dark);
+  --text2: #555555;
+  --text3: var(--text-muted);
+  --text-inverse: #ffffff;
+
+  /* Semantic aliases (used across components) */
+  --primary: var(--budol-orange);
+  --primary-hover: var(--budol-orange-hover);
+  --primary-light: rgba(255, 87, 34, 0.12);
+  --accent: var(--budol-orange);
+  --accent-hover: var(--budol-orange-hover);
+  --accent-warm: var(--budol-orange);
+  --accent-warm-dim: rgba(255, 87, 34, 0.14);
+
+  --surface-dark: #424242;
+  --surface-darker: #333333;
+  --surface-deepest: #f5f5f5;
+
+  --text-on-dark: #ffffff;
+  --text-muted-on-dark: rgba(255, 255, 255, 0.82);
+  --text-subtle-on-dark: rgba(255, 255, 255, 0.58);
+
+  --success: var(--map-land);
+  --success-bg: rgba(76, 175, 80, 0.12);
+  --error: var(--alert-red);
+  --error-bg: rgba(244, 67, 54, 0.1);
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.14);
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.12);
+
+  --gradient-brand: linear-gradient(135deg, var(--budol-orange) 0%, var(--budol-orange-hover) 100%);
+  --gradient-page-dark:
+    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(255, 87, 34, 0.08) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 30% at 80% 80%, rgba(33, 150, 243, 0.06) 0%, transparent 60%);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  --font-sans: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
 }
 
 [data-theme='dark'] {
-  --bg: #0f0f0f;
-  --bg2: #1a1a1a;
-  --border: #222222;
-  --text: #e0e0e0;
-  --text2: #aaaaaa;
-  --text3: #666666;
+  --bg: #212121;
+  --bg2: #2c2c2c;
+  --bg-card: #2c2c2c;
+  --bg-elevated: var(--bg-card);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --text-dark: #f5f5f5;
+  --text: var(--text-dark);
+  --text2: #cccccc;
+  --text-muted: #9e9e9e;
+  --text3: var(--text-muted);
+  --primary-light: rgba(255, 87, 34, 0.2);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
 }
 
 body {
   background: var(--bg);
-  color: var(--text);
-  transition: background 0.2s, color 0.2s;
+  color: var(--text-dark);
+  font-family: var(--font-sans);
+  transition:
+    background 0.25s,
+    color 0.25s;
+}
+
+a {
+  color: var(--budol-orange);
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+/* Shared primary button */
+.btn-budol {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: var(--budol-orange);
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.btn-budol:hover {
+  background: var(--budol-orange-hover);
+}
+
+.btn-budol:active {
+  transform: scale(0.98);
 }

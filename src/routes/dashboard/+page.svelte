@@ -483,14 +483,14 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background: #070f1f;
+    background: var(--surface-deepest);
   }
 
   .dashboard {
     display: flex;
     flex: 1;
     min-height: 0;
-    background: #070f1f;
+    background: var(--surface-deepest);
     color: #e8f4fc;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
@@ -498,7 +498,7 @@
   .sidebar {
     width: 260px;
     flex-shrink: 0;
-    background: #0c1a35;
+    background: var(--surface-darker);
     border-right: 1px solid rgba(73, 182, 234, 0.15);
     display: flex;
     flex-direction: column;
@@ -564,7 +564,7 @@
     padding: 4px 0;
     font-family: inherit;
   }
-  .link-btn:hover { color: #49b6ea; }
+  .link-btn:hover { color: var(--accent-warm); }
   .link-btn.danger:hover { color: #f87171; }
 
   .main {
@@ -605,7 +605,7 @@
   }
 
   .kpi {
-    background: #0c1a35;
+    background: var(--surface-darker);
     border: 1px solid rgba(20, 62, 136, 0.5);
     border-radius: 12px;
     padding: 1rem;
@@ -629,7 +629,7 @@
   .callout p { margin: 0; font-size: 13px; color: #84b9d5; }
 
   .info-card, .panel {
-    background: #0c1a35;
+    background: var(--surface-darker);
     border: 1px solid rgba(20, 62, 136, 0.5);
     border-radius: 12px;
     padding: 1.25rem;
@@ -642,7 +642,7 @@
   }
 
   .panel-desc { margin: -0.25rem 0 1rem; font-size: 13px; color: #4d7a9e; }
-  .req { color: #e84c3d; }
+  .req { color: var(--accent); }
 
   .info-card dl {
     display: grid;
@@ -674,7 +674,7 @@
     padding: 1rem;
     border-radius: 12px;
     border: 2px solid rgba(20, 62, 136, 0.6);
-    background: #091525;
+    background: var(--surface-deepest);
     color: #84b9d5;
     cursor: pointer;
     text-align: left;
@@ -684,7 +684,7 @@
 
   .type-card:hover { border-color: rgba(73, 182, 234, 0.4); }
   .type-card.selected {
-    border-color: #3b82f6;
+    border-color: var(--primary);
     background: rgba(59, 130, 246, 0.12);
     color: #e8f4fc;
   }
@@ -698,7 +698,7 @@
     background: rgba(59, 130, 246, 0.15);
     border: 1px solid rgba(59, 130, 246, 0.3);
     border-radius: 8px;
-    color: #49b6ea;
+    color: var(--accent-warm);
     font-size: 13px;
     font-weight: 600;
   }
@@ -720,7 +720,7 @@
   input, select, textarea {
     width: 100%;
     padding: 10px 12px;
-    background: #091525;
+    background: var(--surface-deepest);
     border: 1px solid #143e88;
     border-radius: 8px;
     color: #e8f4fc;
@@ -731,7 +731,7 @@
   }
 
   input:focus, select:focus, textarea:focus {
-    border-color: #49b6ea;
+    border-color: var(--accent-warm);
     box-shadow: 0 0 0 3px rgba(121, 224, 233, 0.12);
   }
 
@@ -741,13 +741,13 @@
 
   .progress-ring {
     text-align: center;
-    background: #091525;
+    background: var(--surface-deepest);
     border: 1px solid #143e88;
     border-radius: 12px;
     padding: 10px 16px;
     flex-shrink: 0;
   }
-  .progress-ring span { display: block; font-size: 1.25rem; font-weight: 700; color: #49b6ea; }
+  .progress-ring span { display: block; font-size: 1.25rem; font-weight: 700; color: var(--accent-warm); }
   .progress-ring small { font-size: 10px; color: #4d7a9e; text-transform: uppercase; }
 
   .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -760,7 +760,7 @@
     gap: 12px;
     align-items: start;
     padding: 12px 14px;
-    background: #091525;
+    background: var(--surface-deepest);
     border: 1px solid rgba(20, 62, 136, 0.5);
     border-radius: 10px;
   }
@@ -780,7 +780,7 @@
   .listing-thumb.placeholder {
     display: grid;
     place-items: center;
-    background: #070f1f;
+    background: var(--surface-deepest);
     font-size: 1.75rem;
   }
 
@@ -794,7 +794,7 @@
     padding: 2px 7px;
     border-radius: 10px;
     background: rgba(59, 130, 246, 0.15);
-    color: #49b6ea;
+    color: var(--accent-warm);
   }
   .tag.highlight { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
 
@@ -820,7 +820,7 @@
   .text-btn {
     background: none;
     border: none;
-    color: #49b6ea;
+    color: var(--accent-warm);
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
@@ -856,7 +856,7 @@
   }
 
   .primary-btn {
-    background: linear-gradient(135deg, #0d58b0, #49b6ea);
+    background: var(--gradient-brand);
     color: white;
     box-shadow: 0 4px 16px rgba(13, 88, 176, 0.35);
   }

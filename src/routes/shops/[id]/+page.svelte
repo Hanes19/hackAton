@@ -7,6 +7,14 @@
     getProductIndustry,
     getServiceType
   } from '$lib/listingCatalog'
+  import {
+    type MapShop,
+    shopRating,
+    shopReviewCount,
+    priceRange,
+    shopThumbnail,
+    isOpenNow
+  } from '$lib/mapShop'
 
   interface Product {
     id: string
@@ -21,15 +29,7 @@
     details?: Record<string, string> | null
   }
 
-  interface Shop {
-    id: string
-    name: string
-    description: string
-    category: string
-    address: string
-    lat: number
-    lng: number
-    business_type?: string | null
+  interface Shop extends MapShop {
     products: Product[]
   }
 
@@ -43,222 +43,516 @@
     if (data.error) error = data.error
     else shop = data
   })
+
+  function stars(rating: number): string {
+    const full = Math.floor(rating)
+    const half = rating - full >= 0.5
+    return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(5 - full - (half ? 1 : 0))
+  }
 </script>
 
 <div class="shop-page">
   <NavBar variant="light" />
 
-  <div class="content">
-    <a href="/map" class="back-link">← Back to map</a>
-
-    {#if error}
+  {#if error}
+    <div class="state-wrap">
       <p class="error">{error}</p>
-    {:else if !shop}
-      <p class="muted">Loading...</p>
-    {:else}
-      <div class="shop-header">
-        <span class="category">{shop.category}</span>
-        {#if shop.business_type}
-          <span class="type-badge">{shop.business_type === 'service' ? 'Service' : 'Product'} shop</span>
-        {/if}
-        <h1>{shop.name}</h1>
-        <p class="address">📍 {shop.address}</p>
-        <p class="description">{shop.description}</p>
-      </div>
-
-      <hr />
-
-      <h2>{shop.business_type === 'service' ? 'Services' : 'Products'}</h2>
-
-      {#if shop.products && shop.products.length > 0}
-        <div class="listing-list">
-          {#each shop.products as product (product.id)}
-            {@const isService = shop.business_type === 'service'}
-            {@const chips = formatDetailChips(
-              isService ? 'service' : 'product',
-              product.industry ?? '',
-              product.details ?? {}
-            )}
-            {@const catLabel = isService
-              ? getServiceType(product.industry ?? 'personal_care').label
-              : (product.subcategory || getProductIndustry(product.industry ?? 'food').label)}
-            <article class="listing-item">
-              {#if product.image_data}
-                <img src={product.image_data} alt="" class="listing-photo" />
-              {:else}
-                <div class="listing-photo placeholder">{isService ? '🛠' : '📦'}</div>
+      <a href="/map" class="back-link">← Back to map</a>
+    </div>
+  {:else if !shop}
+    <div class="state-wrap">
+      <span class="spinner" aria-hidden="true"></span>
+      <p class="muted">Loading shop…</p>
+    </div>
+  {:else}
+    <header class="hero">
+      <img src={shopThumbnail(shop)} alt="" class="hero-img" />
+      <div class="hero-shade"></div>
+      <div class="hero-inner">
+        <a href="/map" class="back-link">← Back to map</a>
+        <div class="hero-card">
+          <div class="hero-top">
+            <div class="tags">
+              <span class="tag category">{shop.category}</span>
+              {#if shop.business_type}
+                <span class="tag muted">
+                  {shop.business_type === 'service' ? 'Services' : 'Products'}
+                </span>
               {/if}
-              <div class="listing-body">
-                <div class="tags">
-                  <span class="tag">{catLabel}</span>
-                  {#if product.highlights}<span class="tag gold">{product.highlights}</span>{/if}
-                </div>
-                <h3>{product.name}</h3>
-                <p class="listing-desc">{product.description}</p>
-                {#if chips.length}
-                  <div class="details">
-                    {#each chips as chip}<span class="detail">{chip}</span>{/each}
-                  </div>
-                {/if}
-              </div>
-              <span class="price">₱{Number(product.price).toLocaleString()}</span>
-            </article>
-          {/each}
+            </div>
+            <span class="status-pill" class:open={isOpenNow(shop.id)}>
+              {isOpenNow(shop.id) ? 'Open now' : 'Closed'}
+            </span>
+          </div>
+          <h1>{shop.name}</h1>
+          <div class="meta-row">
+            <span class="rating-num">{shopRating(shop.id).toFixed(1)}</span>
+            <span class="stars">{stars(shopRating(shop.id))}</span>
+            <span class="reviews">({shopReviewCount(shop.id)} reviews)</span>
+          </div>
+          <p class="address">📍 {shop.address || 'Bukidnon, Philippines'}</p>
         </div>
-      {:else}
-        <p class="muted">No listings yet.</p>
-      {/if}
-    {/if}
-  </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="info-strip">
+        <div class="info-tile">
+          <span class="tile-label">Price range</span>
+          <strong>{priceRange(shop.products)}</strong>
+        </div>
+        <div class="info-tile">
+          <span class="tile-label">Listings</span>
+          <strong>{shop.products?.length ?? 0} items</strong>
+        </div>
+        <div class="info-tile wide">
+          <span class="tile-label">About</span>
+          <p>{shop.description || 'A local business on Budol Map.'}</p>
+        </div>
+      </section>
+
+      <section class="listings">
+        <div class="section-head">
+          <h2>{shop.business_type === 'service' ? 'Services' : 'Menu & products'}</h2>
+          <a href="/map" class="map-link">View on map</a>
+        </div>
+
+        {#if shop.products && shop.products.length > 0}
+          <div class="product-grid">
+            {#each shop.products as product (product.id)}
+              {@const isService = shop.business_type === 'service'}
+              {@const chips = formatDetailChips(
+                isService ? 'service' : 'product',
+                product.industry ?? '',
+                product.details ?? {}
+              )}
+              {@const catLabel = isService
+                ? getServiceType(product.industry ?? 'personal_care').label
+                : (product.subcategory || getProductIndustry(product.industry ?? 'food').label)}
+              <article class="product-card">
+                {#if product.image_data}
+                  <img src={product.image_data} alt="" class="product-img" />
+                {:else}
+                  <div class="product-img placeholder">{isService ? '🛠' : '🍽'}</div>
+                {/if}
+                <div class="product-body">
+                  <div class="product-head">
+                    <div>
+                      <div class="product-tags">
+                        <span class="product-tag">{catLabel}</span>
+                        {#if product.highlights}
+                          <span class="product-tag highlight">{product.highlights}</span>
+                        {/if}
+                      </div>
+                      <h3>{product.name}</h3>
+                    </div>
+                    <span class="product-price">₱{Number(product.price).toLocaleString()}</span>
+                  </div>
+                  {#if product.description}
+                    <p class="product-desc">{product.description}</p>
+                  {/if}
+                  {#if chips.length}
+                    <div class="chips">
+                      {#each chips as chip}<span class="chip">{chip}</span>{/each}
+                    </div>
+                  {/if}
+                </div>
+              </article>
+            {/each}
+          </div>
+        {:else}
+          <p class="empty">No listings yet.</p>
+        {/if}
+      </section>
+    </main>
+  {/if}
 </div>
 
 <style>
   .shop-page {
     min-height: 100vh;
-    background: #fff;
-    font-family: 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text-dark);
+    font-family: var(--font-sans);
   }
 
-  .content {
-    max-width: 720px;
+  .state-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 80px 24px;
+    color: var(--text-muted);
+  }
+
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--border);
+    border-top-color: var(--budol-orange);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .hero {
+    position: relative;
+    min-height: 280px;
+    background: var(--surface-dark);
+  }
+
+  .hero-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .hero-shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.35) 0%,
+      rgba(0, 0, 0, 0.55) 55%,
+      var(--bg) 100%
+    );
+  }
+
+  .hero-inner {
+    position: relative;
+    max-width: 960px;
     margin: 0 auto;
-    padding: 1.5rem 1rem 3rem;
+    padding: 88px 20px 0;
   }
 
   .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: 13px;
-    color: #666;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
     text-decoration: none;
+    margin-bottom: 16px;
   }
 
-  .back-link:hover { color: #e84c3d; }
-
-  .shop-header { margin-top: 1rem; }
-
-  .category {
-    font-size: 12px;
-    background: #f0f0f0;
-    padding: 3px 10px;
-    border-radius: 20px;
-    color: #555;
+  .back-link:hover {
+    color: white;
   }
 
-  .type-badge {
-    font-size: 11px;
-    background: #e8f4fc;
-    color: #0d58b0;
-    padding: 3px 10px;
-    border-radius: 20px;
-    margin-left: 6px;
+  .hero-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 22px;
+    box-shadow: var(--shadow-md);
+  }
+
+  .hero-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tag {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 4px 9px;
+    border-radius: var(--radius-pill);
+  }
+
+  .tag.category {
+    background: var(--primary-light);
+    color: var(--budol-orange);
+  }
+
+  .tag.muted {
+    background: var(--bg);
+    color: var(--text-muted);
+  }
+
+  .status-pill {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    background: rgba(244, 67, 54, 0.1);
+    color: var(--alert-red);
+    flex-shrink: 0;
+  }
+
+  .status-pill.open {
+    background: var(--success-bg);
+    color: var(--success);
   }
 
   h1 {
-    font-size: 1.6rem;
-    font-weight: 700;
-    margin: 0.5rem 0;
-    color: #1a1a1a;
+    margin: 0 0 8px;
+    font-size: clamp(1.5rem, 4vw, 2rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
   }
 
-  .address { color: #666; font-size: 14px; margin: 0; }
-  .description { margin-top: 0.75rem; color: #444; line-height: 1.6; }
+  .meta-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
 
-  hr {
-    margin: 1.5rem 0;
-    border: none;
-    border-top: 1px solid #eee;
+  .rating-num {
+    font-weight: 800;
+  }
+
+  .stars {
+    color: #f5a623;
+    letter-spacing: -1px;
+  }
+
+  .reviews {
+    color: var(--text-muted);
+  }
+
+  .address {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 24px 20px 64px;
+  }
+
+  .info-strip {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .info-tile {
+    padding: 14px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .info-tile.wide {
+    grid-column: 1 / -1;
+  }
+
+  .tile-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .info-tile strong {
+    font-size: 15px;
+  }
+
+  .info-tile p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
   }
 
   h2 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
   }
 
-  .listing-list {
+  .map-link {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--budol-orange);
+    text-decoration: none;
+  }
+
+  .map-link:hover {
+    color: var(--budol-orange-hover);
+  }
+
+  .product-grid {
     display: flex;
     flex-direction: column;
     gap: 14px;
   }
 
-  .listing-item {
-    border: 1px solid #eee;
-    border-radius: 12px;
-    padding: 14px;
-    display: grid;
-    grid-template-columns: 100px 1fr auto;
-    gap: 14px;
-    align-items: start;
+  .product-card {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
   }
 
-  @media (max-width: 520px) {
-    .listing-item { grid-template-columns: 80px 1fr; }
-    .price { grid-column: 2; justify-self: start; margin-top: 4px; }
+  .product-card:hover {
+    border-color: rgba(255, 87, 34, 0.25);
+    box-shadow: var(--shadow-md);
   }
 
-  .listing-photo {
-    width: 100px;
-    height: 100px;
+  .product-img {
+    width: 96px;
+    height: 96px;
+    border-radius: var(--radius-sm);
     object-fit: cover;
-    border-radius: 10px;
+    flex-shrink: 0;
   }
 
-  .listing-photo.placeholder {
-    display: grid;
-    place-items: center;
-    background: #f5f5f5;
-    font-size: 2rem;
+  .product-img.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    font-size: 28px;
   }
 
-  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
-
-  .tag {
-    font-size: 10px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 12px;
-    background: #e8f4fc;
-    color: #0d58b0;
+  .product-body {
+    flex: 1;
+    min-width: 0;
   }
 
-  .tag.gold { background: #fef3c7; color: #b45309; }
-
-  .listing-body h3 {
-    margin: 0 0 4px;
-    font-size: 15px;
-    font-weight: 600;
-    color: #1a1a1a;
+  .product-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 6px;
   }
 
-  .listing-desc {
-    font-size: 13px;
-    color: #666;
-    margin: 0;
-    line-height: 1.5;
-  }
-
-  .details {
+  .product-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin-top: 8px;
+    margin-bottom: 6px;
   }
 
-  .detail {
-    font-size: 11px;
+  .product-tag {
+    font-size: 10px;
+    font-weight: 600;
     padding: 3px 8px;
-    border-radius: 6px;
-    background: #f0fdf4;
-    color: #15803d;
-    border: 1px solid #bbf7d0;
+    border-radius: var(--radius-pill);
+    background: var(--bg);
+    color: var(--text-muted);
   }
 
-  .price {
-    font-weight: 700;
+  .product-tag.highlight {
+    background: var(--primary-light);
+    color: var(--budol-orange);
+  }
+
+  .product-head h3 {
+    margin: 0;
     font-size: 16px;
-    color: #e84c3d;
+    font-weight: 700;
+    color: var(--text-dark);
+  }
+
+  .product-price {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--budol-orange);
     white-space: nowrap;
   }
 
-  .error { color: #c0392b; margin-top: 1rem; }
-  .muted { color: #999; font-size: 14px; margin-top: 1rem; }
+  .product-desc {
+    margin: 0 0 8px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text-muted);
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .chip {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--success-bg);
+    color: var(--success);
+  }
+
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+    background: var(--bg-card);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+  }
+
+  .error {
+    color: var(--alert-red);
+    margin: 0;
+  }
+
+  .muted {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  @media (max-width: 640px) {
+    .hero-inner {
+      padding-top: 76px;
+    }
+
+    .product-card {
+      flex-direction: column;
+    }
+
+    .product-img,
+    .product-img.placeholder {
+      width: 100%;
+      height: 160px;
+    }
+
+    .product-head {
+      flex-direction: column;
+    }
+  }
 </style>

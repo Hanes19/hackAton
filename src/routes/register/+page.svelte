@@ -498,7 +498,7 @@
 <style>
   .page {
     min-height: 100vh;
-    background: #070f1f;
+    background: var(--surface-deepest);
     background-image:
       radial-gradient(ellipse 60% 50% at 50% 0%, rgba(13, 88, 176, 0.18) 0%, transparent 70%),
       radial-gradient(ellipse 40% 30% at 80% 80%, rgba(73, 182, 234, 0.07) 0%, transparent 60%);
@@ -518,7 +518,7 @@
     display: inline-block;
     margin-bottom: 1rem;
   }
-  .back-link:hover { color: #49b6ea; }
+  .back-link:hover { color: var(--accent-warm); }
 
   .header { margin-bottom: 1.5rem; }
   .brand { display: flex; gap: 12px; align-items: flex-start; }
@@ -553,10 +553,10 @@
     text-decoration: none;
     border: 1px solid #143e88;
     color: #84b9d5;
-    background: #091525;
+    background: var(--surface-deepest);
   }
   .banner-btn.primary {
-    background: linear-gradient(135deg, #0d58b0, #49b6ea);
+    background: var(--gradient-brand);
     border-color: transparent;
     color: white;
   }
@@ -584,13 +584,13 @@
     place-items: center;
     font-size: 12px;
     font-weight: 700;
-    background: #091525;
+    background: var(--surface-deepest);
     border: 1px solid #143e88;
     color: #4d7a9e;
   }
   .step-item.active .step-num {
-    background: #0d58b0;
-    border-color: #49b6ea;
+    background: var(--primary);
+    border-color: var(--accent-warm);
     color: white;
   }
   .step-item.done .step-num {
@@ -599,7 +599,7 @@
     color: #34d399;
   }
   .step-label { font-size: 10px; color: #2d5580; white-space: nowrap; }
-  .step-item.active .step-label { color: #49b6ea; }
+  .step-item.active .step-label { color: var(--accent-warm); }
   .step-line {
     flex: 1;
     min-width: 24px;
@@ -611,7 +611,7 @@
   .step-line.done { background: #34d399; }
 
   .card {
-    background: #0c1a35;
+    background: var(--surface-darker);
     border: 1px solid rgba(73, 182, 234, 0.15);
     border-radius: 16px;
     padding: 1.75rem;
@@ -627,11 +627,11 @@
 
   .field { display: flex; flex-direction: column; gap: 6px; }
   label, .field-label { font-size: 12px; font-weight: 500; color: #6eb3da; text-transform: uppercase; letter-spacing: 0.02em; }
-  .req { color: #e84c3d; }
+  .req { color: var(--accent); }
   input, select, textarea {
     width: 100%;
     padding: 10px 12px;
-    background: #091525;
+    background: var(--surface-deepest);
     border: 1px solid #143e88;
     border-radius: 8px;
     color: #e8f4fc;
@@ -641,7 +641,7 @@
     font-family: inherit;
   }
   input:focus, select:focus, textarea:focus {
-    border-color: #49b6ea;
+    border-color: var(--accent-warm);
     box-shadow: 0 0 0 3px rgba(121, 224, 233, 0.12);
   }
   textarea { resize: vertical; min-height: 72px; }
@@ -662,7 +662,7 @@
   .lgu-badge span { color: #4d7a9e; font-size: 12px; }
 
   .info-box {
-    background: #091525;
+    background: var(--surface-deepest);
     border: 1px solid #143e88;
     border-radius: 8px;
     padding: 10px 12px;
@@ -673,7 +673,7 @@
 
   .verify-btn {
     padding: 11px;
-    background: linear-gradient(135deg, #0d58b0, #49b6ea);
+    background: var(--gradient-brand);
     border: none;
     border-radius: 8px;
     color: white;
@@ -717,7 +717,7 @@
   .demo-btn {
     background: none;
     border: none;
-    color: #49b6ea;
+    color: var(--accent-warm);
     cursor: pointer;
     font-size: 12px;
     padding: 4px 0;
@@ -742,7 +742,7 @@
     padding: 1rem;
     transition: border-color 0.2s;
   }
-  .upload-zone:hover { border-color: #49b6ea; }
+  .upload-zone:hover { border-color: var(--accent-warm); }
   .upload-icon { font-size: 1.75rem; }
   .upload-name { font-size: 11px; color: #34d399; }
   .id-preview {
@@ -769,7 +769,7 @@
     margin-bottom: 1rem;
   }
   .review-grid section {
-    background: #091525;
+    background: var(--surface-deepest);
     border: 1px solid #143e88;
     border-radius: 10px;
     padding: 12px 14px;
@@ -779,7 +779,7 @@
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: #49b6ea;
+    color: var(--accent-warm);
   }
   .review-grid dl {
     margin: 0;
@@ -839,7 +839,7 @@
     border: none;
   }
   .primary-btn {
-    background: linear-gradient(135deg, #0d58b0, #49b6ea);
+    background: var(--gradient-brand);
     color: white;
     box-shadow: 0 4px 16px rgba(13, 88, 176, 0.35);
   }
@@ -851,7 +851,7 @@
   }
 
   .success-card {
-    background: #0c1a35;
+    background: var(--surface-darker);
     border: 1px solid rgba(52, 211, 153, 0.3);
     border-radius: 16px;
     padding: 2.5rem 2rem;

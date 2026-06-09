@@ -277,7 +277,7 @@
     border: 1px solid rgba(73, 182, 234, 0.2);
     border-radius: 12px;
     overflow: hidden;
-    background: #091525;
+    background: var(--surface-deepest);
   }
 
   .editor-toolbar {
@@ -287,7 +287,7 @@
     gap: 12px;
     flex-wrap: wrap;
     padding: 10px 14px;
-    background: #0c1a35;
+    background: var(--surface-darker);
     border-bottom: 1px solid rgba(20, 62, 136, 0.5);
   }
 
@@ -325,7 +325,7 @@
   }
 
   .btn.primary {
-    background: linear-gradient(135deg, #0d58b0, #49b6ea);
+    background: var(--gradient-brand);
     color: white;
   }
 
@@ -378,7 +378,7 @@
     overflow: hidden;
   }
 
-  .photo-upload:hover { border-color: #49b6ea; }
+  .photo-upload:hover { border-color: var(--primary); }
 
   .photo-preview {
     width: 100%;
@@ -438,7 +438,7 @@
 
   input, select, textarea {
     padding: 9px 11px;
-    background: #070f1f;
+    background: var(--surface-deepest);
     border: 1px solid #143e88;
     border-radius: 8px;
     color: #e8f4fc;
@@ -450,7 +450,7 @@
   }
 
   input:focus, select:focus, textarea:focus {
-    border-color: #49b6ea;
+    border-color: var(--primary);
   }
 
   textarea { resize: vertical; min-height: 72px; }
@@ -467,7 +467,7 @@
     padding: 12px;
     border-radius: 10px;
     border: 2px solid rgba(20, 62, 136, 0.5);
-    background: #070f1f;
+    background: var(--surface-deepest);
     color: #84b9d5;
     cursor: pointer;
     font-family: inherit;
@@ -485,7 +485,7 @@
 
   .cat-card:hover { border-color: rgba(73, 182, 234, 0.4); }
   .cat-card.selected {
-    border-color: #3b82f6;
+    border-color: var(--primary);
     background: rgba(59, 130, 246, 0.12);
   }
 
@@ -493,7 +493,7 @@
     display: grid;
     grid-template-columns: 140px 1fr;
     gap: 14px;
-    background: #070f1f;
+    background: var(--surface-deepest);
     border: 1px solid #143e88;
     border-radius: 12px;
     padding: 14px;
@@ -514,7 +514,7 @@
   .preview-img.placeholder {
     display: grid;
     place-items: center;
-    background: #0c1a35;
+    background: var(--surface-darker);
     font-size: 2.5rem;
   }
 
@@ -526,7 +526,7 @@
     padding: 3px 8px;
     border-radius: 12px;
     background: rgba(59, 130, 246, 0.2);
-    color: #49b6ea;
+    color: var(--primary);
   }
 
   .chip.muted { background: rgba(255, 255, 255, 0.06); color: #84b9d5; }

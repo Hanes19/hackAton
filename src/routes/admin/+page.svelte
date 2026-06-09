@@ -76,7 +76,7 @@
   ])
 
   const catColor: Record<string, string> = {
-    AUTH: '#6366f1', ADMIN: '#f59e0b', USER: '#10b981', SYS: '#6b7280', REPORT: '#ef4444', AD: '#3b82f6'
+    AUTH: '#6366f1', ADMIN: '#f59e0b', USER: '#10b981', SYS: '#6b7280', REPORT: '#ef4444', AD: '#658E9C'
   }
 
   const bukidnonRegions = $derived(() => {
@@ -230,8 +230,8 @@
               <rect width="100%" height="100%" fill="url(#grid)" rx="8" />
               <path class="bukidnon-boundary" d="M120 20 L220 40 L280 120 L260 220 L290 350 L240 440 L150 440 L80 380 L60 280 L90 140 Z" />
               {#each bukidnonRegions() as region (region.id)}
-                <circle cx={region.cx} cy={region.cy} r={region.r + 8} fill="#3b82f6" fill-opacity={(region.count / maxUserCount) * 0.15} />
-                <circle cx={region.cx} cy={region.cy} r={region.r} fill="#3b82f6" fill-opacity={0.2 + (region.count / maxUserCount) * 0.5} stroke="#60a5fa" stroke-width="1.5" class="interactive-region-node" onmouseenter={() => hoveredRegion = { name: region.name, count: region.count }} onmouseleave={() => hoveredRegion = null} />
+                <circle cx={region.cx} cy={region.cy} r={region.r + 8} fill="#658E9C" fill-opacity={(region.count / maxUserCount) * 0.15} />
+                <circle cx={region.cx} cy={region.cy} r={region.r} fill="#658E9C" fill-opacity={0.2 + (region.count / maxUserCount) * 0.5} stroke="#8CBA80" stroke-width="1.5" class="interactive-region-node" onmouseenter={() => hoveredRegion = { name: region.name, count: region.count }} onmouseleave={() => hoveredRegion = null} />
                 <text x={region.cx} y={region.cy + 4} text-anchor="middle" class="map-node-text">{region.count}</text>
                 <text x={region.cx} y={region.cy + region.r + 14} text-anchor="middle" class="map-node-subtext">{region.name}</text>
               {/each}
@@ -275,7 +275,7 @@
       <div class="panel-card">
         <div class="panel-header flex-header">
           <h3>Applications Queue</h3>
-          <a href="/register" class="btn-text" style="font-size: 12px; color: #49b6ea;">+ New registration form</a>
+          <a href="/register" class="btn-text" style="font-size: 12px; color: #CACF85;">+ New registration form</a>
         </div>
         <div class="table-container">
           <table class="custom-table">
@@ -357,7 +357,7 @@
                     <td class="text-dim">{ad.target}</td>
                     <td>
                       <div style="display: flex; align-items: center; gap: 8px;">
-                        <div style="width: 60px; height: 6px; background: #222; border-radius: 3px; overflow: hidden;"><div style="width: {Math.min(100, (ad.clicks / ad.impressions) * 100 * 5)}%; height: 100%; background: #3b82f6;"></div></div>
+                        <div style="width: 60px; height: 6px; background: #222; border-radius: 3px; overflow: hidden;"><div style="width: {Math.min(100, (ad.clicks / ad.impressions) * 100 * 5)}%; height: 100%; background: #658E9C;"></div></div>
                         <span class="font-medium" style="font-size: 12px;">{((ad.clicks / ad.impressions) * 100).toFixed(1)}%</span>
                       </div>
                     </td>
@@ -488,7 +488,7 @@
           {#if settingsSubTab === 'catalog'}
             <div class="setting-row"><div class="setting-info"><h4>Variation Architecture</h4><p>Allow multi-tier properties down to inventory components.</p></div><label class="toggle-switch"><input type="checkbox" checked /><span class="slider"></span></label></div>
             <div class="setting-row"><div class="setting-info"><h4>Rule-Based Automated Categorization</h4><p>Deploy AI matching trees to handle marketplace sorting protocols automatically.</p></div><label class="toggle-switch"><input type="checkbox" /><span class="slider"></span></label></div>
-            <div class="setting-row" style="border: none;"><button class="action-btn" style="background: #3b82f6; color: white; border: none;">Save Catalog Settings</button></div>
+            <div class="setting-row" style="border: none;"><button class="action-btn" style="background: #658E9C; color: white; border: none;">Save Catalog Settings</button></div>
           {/if}
           {#if settingsSubTab === 'logistics'} <div class="setting-placeholder"><p class="text-dim">Logistics parameters and real-time routing engines configuration options display here.</p></div> {/if}
           {#if settingsSubTab === 'operations'} <div class="setting-placeholder"><p class="text-dim">Financial ledger audit protocols and standard user clearance levels configuration display here.</p></div> {/if}
@@ -504,7 +504,7 @@
         <div class="modal-header">
           <div>
             <h3 style="margin: 0; font-size: 1.1rem; color: #fff;">Edit User Roles</h3>
-            <p class="text-dim" style="margin: 4px 0 0; font-size: 12px;">Modifying access for <strong style="color: #60a5fa;">{editingUser.name || editingUser.email}</strong></p>
+            <p class="text-dim" style="margin: 4px 0 0; font-size: 12px;">Modifying access for <strong style="color: #8CBA80;">{editingUser.name || editingUser.email}</strong></p>
           </div>
           <button class="close-btn" onclick={() => showPermsModal = false}>✕</button>
         </div>
@@ -547,13 +547,13 @@
   /* Sidebar */
   .sidebar { width: 240px; background-color: #141414; border-right: 1px solid #222222; display: flex; flex-direction: column; padding: 1.5rem 1rem; flex-shrink: 0; }
   .brand-header { display: flex; align-items: center; gap: 0.75rem; padding-bottom: 2rem; border-bottom: 1px solid #222222; margin-bottom: 1.5rem; }
-  .brand-avatar { width: 32px; height: 32px; background: #3b82f6; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
+  .brand-avatar { width: 32px; height: 32px; background: #658E9C; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
   .brand-info h3 { font-size: 0.95rem; margin: 0; }
   .brand-info span { font-size: 0.75rem; color: #64748b; }
   .nav-menu { display: flex; flex-direction: column; gap: 0.35rem; flex: 1; }
   .nav-item { display: flex; align-items: center; gap: 0.75rem; background: transparent; border: none; color: #94a3b8; padding: 0.75rem 1rem; border-radius: 8px; text-align: left; cursor: pointer; font-size: 0.9rem; transition: all 0.2s ease; }
   .nav-item:hover, .nav-item.active { background: #1e1e1e; color: #ffffff; }
-  .nav-item.active { border-left: 3px solid #3b82f6; padding-left: calc(1rem - 3px); }
+  .nav-item.active { border-left: 3px solid #658E9C; padding-left: calc(1rem - 3px); }
   .nav-badge-alert { margin-left: auto; background: #ef4444; color: white; font-size: 10px; padding: 2px 6px; border-radius: 12px; font-weight: bold; }
   .sidebar-footer { padding-top: 1rem; border-top: 1px solid #222; }
 
@@ -563,7 +563,7 @@
   .tab-header h2 { margin: 0 0 0.25rem 0; font-size: 1.5rem; font-weight: 600; }
 
   /* Forms & Buttons */
-  .btn-primary { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.2s; }
+  .btn-primary { background: #658E9C; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.2s; }
   .btn-primary:hover { background: #2563eb; }
   
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
@@ -571,10 +571,10 @@
   .input-group.full-width { grid-column: span 2; }
   .input-group label { font-size: 12px; color: #94a3b8; font-weight: 500; }
   .form-input { background: #111; border: 1px solid #333; padding: 10px 12px; border-radius: 6px; color: #fff; font-size: 13px; font-family: inherit; }
-  .form-input:focus { outline: none; border-color: #3b82f6; }
+  .form-input:focus { outline: none; border-color: #658E9C; }
   
   .upload-zone { border: 1px dashed #333; background: #111; border-radius: 8px; padding: 2rem 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; transition: border-color 0.2s; cursor: pointer; }
-  .upload-zone:hover { border-color: #3b82f6; }
+  .upload-zone:hover { border-color: #658E9C; }
 
   /* KPI Cards */
   .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
@@ -585,7 +585,7 @@
   .kpi-icon { font-size: 1.25rem; }
   .kpi-value { font-size: 1.75rem; font-weight: 700; margin: 0.25rem 0; color: #fff; }
   .kpi-trend { font-size: 0.75rem; font-weight: 500; }
-  .text-blue .kpi-value { color: #60a5fa; }
+  .text-blue .kpi-value { color: #8CBA80; }
   .text-amber .kpi-value { color: #fbbf24; }
   .text-emerald .kpi-value { color: #34d399; }
   .text-rose .kpi-value { color: #f87171; }
@@ -615,7 +615,7 @@
   .map-tooltip { position: absolute; top: 12px; left: 12px; background: rgba(15, 15, 15, 0.95); border: 1px solid #333; padding: 8px 12px; border-radius: 6px; font-size: 12px; display: flex; flex-direction: column; gap: 2px; pointer-events: none; opacity: 0; transition: opacity 0.15s ease; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
   .map-tooltip.visible { opacity: 1; }
   .map-tooltip strong { color: #fff; font-weight: 600; }
-  .map-tooltip span { color: #60a5fa; font-weight: 500; }
+  .map-tooltip span { color: #8CBA80; font-weight: 500; }
 
   /* Tables */
   .table-container { overflow-x: auto; }
@@ -629,7 +629,7 @@
   .text-dim { color: #64748b; }
   .text-right { text-align: right; }
   .font-medium { font-weight: 500; color: #e2e8f0; }
-  .btn-text { background: transparent; border: none; color: #3b82f6; cursor: pointer; text-decoration: none; }
+  .btn-text { background: transparent; border: none; color: #658E9C; cursor: pointer; text-decoration: none; }
   .btn-text:hover { text-decoration: underline; }
   .action-btn { background: #222; border: 1px solid #333; color: #aaa; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s; }
   .action-btn:hover { background: #333; color: #fff; }
@@ -650,14 +650,14 @@
   .panel-header-tabs { display: flex; gap: 1rem; border-bottom: 1px solid #222222; }
   .tab-btn { background: transparent; border: none; color: #64748b; padding: 0.75rem 0.5rem; cursor: pointer; font-weight: 500; font-size: 0.95rem; border-bottom: 2px solid transparent; transition: all 0.2s; }
   .tab-btn:hover, .tab-btn.active { color: #ffffff; }
-  .tab-btn.active { border-bottom-color: #3b82f6; }
+  .tab-btn.active { border-bottom-color: #658E9C; }
 
   /* Toggle Switch */
   .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
   .toggle-switch input { opacity: 0; width: 0; height: 0; }
   .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #2e2e2e; transition: .3s; border-radius: 24px; }
   .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
-  input:checked + .slider { background-color: #3b82f6; }
+  input:checked + .slider { background-color: #658E9C; }
   input:checked + .slider:before { transform: translateX(20px); }
 
   /* Settings Controls */
@@ -676,7 +676,7 @@
   .modal-body { padding: 1.5rem; max-height: 60vh; overflow-y: auto; }
   .permissions-list { display: flex; flex-direction: column; gap: 0.5rem; }
   .perm-row { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #111; border: 1px solid #222; border-radius: 8px; cursor: pointer; transition: border-color 0.2s; }
-  .perm-row:hover { border-color: #3b82f6; }
+  .perm-row:hover { border-color: #658E9C; }
   .perm-info h4 { margin: 0 0 4px 0; font-size: 14px; font-weight: 500; color: #e2e8f0; }
   .perm-info p { margin: 0; font-size: 12px; color: #64748b; }
   .modal-footer { padding: 1.25rem 1.5rem; border-top: 1px solid #222; background: #111; display: flex; justify-content: flex-end; gap: 12px; }

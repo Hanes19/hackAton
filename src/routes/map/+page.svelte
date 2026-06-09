@@ -3,27 +3,26 @@
   import MapView from '$lib/MapView.svelte'
   import NavBar from '$lib/NavBar.svelte'
   import MapShopPanel from '$lib/MapShopPanel.svelte'
+  import {
+    MAP_CATEGORIES,
+    filterShops,
+    fetchMapShops,
+    fetchRoute,
+    createGpsTracker,
+    type TravelMode
+  } from '$lib/mapExplorer'
   import type { MapShop } from '$lib/mapShop'
   import type { GeoJsonObject } from 'geojson'
-
-  interface OSRMResponse {
-    routes: {
-      geometry: GeoJsonObject
-      distance: number
-      duration: number
-    }[]
-  }
 
   let shops = $state<MapShop[]>([])
   let search = $state('')
   let selectedCategory = $state('All')
   let focusedShopId = $state<string | null>(null)
   let userLocation = $state<{ lat: number; lng: number } | null>(null)
-  let travelMode = $state<'walking' | 'motorcycle' | 'car'>('motorcycle')
+  let travelMode = $state<TravelMode>('motorcycle')
 
   let trackingLoading = $state(false)
   let isNavigating = $state(false)
-  let watchId = $state<number | null>(null)
   let recenterTrigger = $state(0)
 
   let routeGeometry = $state<GeoJsonObject | null>(null)
@@ -31,39 +30,39 @@
   let routeEta = $state<number | null>(null)
   let isRouting = $state(false)
 
-  const categories = ['All', 'Food', 'Clothing', 'Electronics', 'Services', 'Health & Beauty']
+  let gpsActive = $state(false)
 
-  let filtered = $derived(
-    shops.filter((s) => {
-      const matchSearch =
-        s.name.toLowerCase().includes(search.toLowerCase()) ||
-        s.category.toLowerCase().includes(search.toLowerCase()) ||
-        (s.products?.some((p) => p.name.toLowerCase().includes(search.toLowerCase())) ?? false)
-      const matchCategory = selectedCategory === 'All' || s.category === selectedCategory
-      return matchSearch && matchCategory
-    })
-  )
+  const categories = MAP_CATEGORIES
+  let filtered = $derived(filterShops(shops, search, selectedCategory))
+  let selectedShop = $derived(shops.find((s) => s.id === focusedShopId) ?? null)
 
-  let selectedShop = $derived(shops.find((s) => s.id === focusedShopId) || null)
+  const gps = createGpsTracker({
+    onLocation: (loc) => {
+      userLocation = loc
+    },
+    onLoading: (loading) => {
+      trackingLoading = loading
+    },
+    onRecenter: () => {
+      recenterTrigger++
+    },
+    onActiveChange: (active) => {
+      gpsActive = active
+    }
+  })
 
   $effect(() => {
     if (userLocation && selectedShop) {
       isRouting = true
-      const profile =
-        travelMode === 'walking' ? 'foot' : travelMode === 'motorcycle' ? 'bike' : 'driving'
-
-      const url = `https://router.project-osrm.org/route/v1/${profile}/${userLocation.lng},${userLocation.lat};${selectedShop.lng},${selectedShop.lat}?geometries=geojson&overview=full`
-
-      fetch(url)
-        .then((res) => res.json())
-        .then((data: OSRMResponse) => {
-          if (data.routes?.length) {
-            routeGeometry = data.routes[0].geometry
-            routeDistance = data.routes[0].distance / 1000
-            routeEta = Math.ceil(data.routes[0].duration / 60)
-          }
+      fetchRoute(userLocation, selectedShop, travelMode)
+        .then((route) => {
+          routeGeometry = route.geometry
+          routeDistance = route.distance
+          routeEta = route.eta
         })
-        .finally(() => (isRouting = false))
+        .finally(() => {
+          isRouting = false
+        })
     } else {
       routeGeometry = null
       routeDistance = null
@@ -72,46 +71,11 @@
   })
 
   onMount(async () => {
-    shops = await fetch('/api/shops').then((r) => r.json())
+    shops = await fetchMapShops()
   })
 
   function handleGpsClick() {
-    if (!navigator.geolocation) return alert('Geolocation not supported by this browser.')
-
-    if (watchId !== null) {
-      if (userLocation) recenterTrigger++
-      return
-    }
-
-    trackingLoading = true
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-        recenterTrigger++
-        trackingLoading = false
-
-        watchId = navigator.geolocation.watchPosition(
-          (newPos) => {
-            userLocation = { lat: newPos.coords.latitude, lng: newPos.coords.longitude }
-          },
-          (err) => console.warn('Background watcher error:', err),
-          { enableHighAccuracy: true, maximumAge: 5000 }
-        )
-      },
-      (err) => {
-        console.error('GPS Error:', err)
-        trackingLoading = false
-        if (err.code === err.PERMISSION_DENIED) {
-          alert(
-            'Location permission denied. Please check your browser settings AND your Windows privacy settings.'
-          )
-        } else {
-          alert("Could not lock your location. Ensure your device's location services are turned on.")
-        }
-      },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: Infinity }
-    )
+    gps.start()
   }
 
   function handleCategoryChange(cat: string) {
@@ -131,113 +95,203 @@
   }
 
   onDestroy(() => {
-    if (watchId !== null) navigator.geolocation.clearWatch(watchId)
+    gps.stop()
   })
 </script>
 
-<div class="layout">
-  <NavBar variant="dark" />
+<svelte:head>
+  <title>Map — Budol Map</title>
+</svelte:head>
 
-  <div class="explorer-content">
-    <MapShopPanel
-      {shops}
-      {filtered}
-      bind:search
-      {selectedCategory}
-      {categories}
-      bind:focusedShopId
+<div class="map-page">
+  <NavBar variant="light" />
+
+  <section class="map-stage" aria-label="Shop explorer map">
+    <MapView
+      shops={filtered}
+      selectedShopId={focusedShopId}
       {userLocation}
-      {routeEta}
-      {routeDistance}
-      {isRouting}
-      {travelMode}
+      {routeGeometry}
       {isNavigating}
-      onCategoryChange={handleCategoryChange}
-      onSelectShop={handleSelectShop}
-      onGpsClick={handleGpsClick}
-      onToggleNav={handleToggleNav}
-      onTravelModeChange={(mode) => (travelMode = mode)}
+      {recenterTrigger}
+      onSelectShop={(id) => handleSelectShop(id)}
     />
 
-    <main class="map-area">
-      <MapView
-        shops={filtered}
-        selectedShopId={focusedShopId}
+    <div class="panel-dock" class:expanded={focusedShopId !== null}>
+      <MapShopPanel
+        {shops}
+        {filtered}
+        bind:search
+        {selectedCategory}
+        {categories}
+        bind:focusedShopId
         {userLocation}
-        {routeGeometry}
+        {routeEta}
+        {routeDistance}
+        {isRouting}
+        {travelMode}
         {isNavigating}
-        {recenterTrigger}
+        onCategoryChange={handleCategoryChange}
+        onSelectShop={handleSelectShop}
+        onGpsClick={handleGpsClick}
+        onToggleNav={handleToggleNav}
+        onTravelModeChange={(mode) => (travelMode = mode)}
       />
+    </div>
 
+    <div class="map-controls">
       <button
-        class="gps-trigger-btn"
-        class:active={watchId !== null}
+        type="button"
+        class="control-btn gps-btn"
+        class:active={gpsActive}
         onclick={handleGpsClick}
         disabled={trackingLoading}
         title="Center on my location"
+        aria-label="Center on my location"
       >
-        {trackingLoading ? '⌛' : '🎯'}
+        {#if trackingLoading}
+          <span class="control-icon loading" aria-hidden="true"></span>
+        {:else}
+          <svg class="control-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="3" fill="currentColor" />
+            <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2" />
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" />
+          </svg>
+        {/if}
       </button>
-    </main>
-  </div>
+    </div>
+  </section>
 </div>
 
 <style>
-  :global(body) {
+  :global(body:has(.map-page)) {
     margin: 0;
     padding: 0;
-    background: #070f1f;
-    font-family: -apple-system, sans-serif;
     overflow: hidden;
   }
 
-  .layout {
+  .map-page {
     height: 100vh;
     display: flex;
     flex-direction: column;
-    background: #070f1f;
-    color: #e8f4fc;
+    background: var(--bg);
+    color: var(--text-dark);
+    font-family: var(--font-sans);
   }
 
-  .explorer-content {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
-
-  .map-area {
+  .map-stage {
     flex: 1;
     min-height: 0;
     position: relative;
+    overflow: hidden;
   }
 
-  .gps-trigger-btn {
+  .panel-dock {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    bottom: 16px;
+    z-index: 500;
+    width: min(380px, calc(100vw - 32px));
+    pointer-events: none;
+    transition: width 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .panel-dock.expanded {
+    width: min(700px, calc(100vw - 32px));
+  }
+
+  .panel-dock :global(.explorer-panel) {
+    pointer-events: auto;
+    height: 100%;
+  }
+
+  .map-controls {
     position: absolute;
     bottom: 24px;
     right: 16px;
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .control-btn {
     width: 44px;
     height: 44px;
-    background: #fff;
-    border: 1px solid #dadce0;
-    color: #1a73e8;
-    border-radius: 8px;
-    font-size: 18px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--primary);
+    border-radius: var(--radius-md);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    transition: background 0.2s;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    transition:
+      background 0.2s,
+      border-color 0.2s,
+      transform 0.15s;
   }
 
-  .gps-trigger-btn:hover {
-    background: #f8f9fa;
+  .control-btn:hover:not(:disabled) {
+    background: var(--bg2);
+    transform: scale(1.04);
   }
 
-  .gps-trigger-btn.active {
-    background: #e6f4ea;
-    border-color: #34a853;
-    color: #137333;
+  .control-btn.active {
+    background: rgba(33, 150, 243, 0.12);
+    border-color: var(--pin-blue);
+    color: var(--pin-blue);
+  }
+
+  .control-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
+  }
+
+  .control-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .control-icon.loading {
+    border: 2px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .panel-dock,
+    .panel-dock.expanded {
+      top: auto;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 58vh;
+      max-height: 520px;
+    }
+
+    .panel-dock :global(.explorer-panel) {
+      max-width: none;
+      border-radius: 16px 16px 0 0;
+    }
+
+    .panel-dock :global(.explorer-panel.nav-hidden) {
+      transform: translateY(100%);
+    }
+
+    .map-controls {
+      bottom: calc(52vh + 16px);
+      right: 12px;
+    }
   }
 </style>

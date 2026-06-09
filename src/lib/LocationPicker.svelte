@@ -203,7 +203,7 @@
     padding: 6px 10px;
     border-radius: 6px;
     border: 1px solid #143e88;
-    background: #091525;
+    background: var(--surface-deepest);
     color: #84b9d5;
     font-size: 11px;
     font-weight: 600;
@@ -212,14 +212,14 @@
   }
 
   .tool-btn:hover:not(:disabled) {
-    border-color: #49b6ea;
-    color: #49b6ea;
+    border-color: var(--primary);
+    color: var(--primary);
   }
 
   .tool-btn.accent {
     background: rgba(73, 182, 234, 0.12);
     border-color: rgba(73, 182, 234, 0.35);
-    color: #49b6ea;
+    color: var(--primary);
   }
 
   .tool-btn:disabled {
@@ -280,7 +280,7 @@
   .coord input {
     width: 100%;
     padding: 8px 10px;
-    background: #091525;
+    background: var(--surface-deepest);
     border: 1px solid #143e88;
     border-radius: 8px;
     color: #e8f4fc;
@@ -291,7 +291,7 @@
   }
 
   .coord input:focus {
-    border-color: #49b6ea;
+    border-color: var(--primary);
   }
 
   .pinned-note {
@@ -307,7 +307,7 @@
   }
 
   :global(.leaflet-container) {
-    background: #091525;
+    background: var(--surface-deepest);
     font-family: inherit;
   }
 </style>

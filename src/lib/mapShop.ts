@@ -57,6 +57,13 @@ export function shopThumbnail(shop: MapShop): string {
   return `https://picsum.photos/seed/${shop.id}/120/120`
 }
 
+/** Demo flag for time-sensitive offers (hash-based until real promos exist). */
+export function hasFlashDeal(shopId: string): boolean {
+  let hash = 0
+  for (let i = 0; i < shopId.length; i++) hash = (hash + shopId.charCodeAt(i) * 3) % 997
+  return hash % 5 === 0
+}
+
 export function isOpenNow(shopId: string): boolean {
   const hour = new Date().getHours()
   let hash = 0

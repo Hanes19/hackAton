@@ -2,23 +2,39 @@
   import { onMount, onDestroy } from 'svelte'
   import type { Map, Marker, GeoJSON } from 'leaflet'
   import type { GeoJsonObject } from 'geojson'
+  import { hasFlashDeal } from '$lib/mapShop'
+  import {
+    MAP_TILE_URL,
+    MAP_TILE_ATTRIBUTION,
+    MAP_COLORS,
+    shopPinHtml,
+    shopPopupHtml
+  } from '$lib/mapTheme'
 
-  interface Shop { id: string; name: string; category: string; lat: number; lng: number }
+  interface Shop {
+    id: string
+    name: string
+    category: string
+    lat: number
+    lng: number
+  }
 
-  let { 
-    shops = [], 
-    selectedShopId = null, 
+  let {
+    shops = [],
+    selectedShopId = null,
     userLocation = null,
     routeGeometry = null,
     isNavigating = false,
-    recenterTrigger = 0
-  }: { 
-    shops: Shop[], 
-    selectedShopId?: string | null, 
-    userLocation: { lat: number; lng: number } | null,
-    routeGeometry: GeoJsonObject | null,
-    isNavigating?: boolean,
+    recenterTrigger = 0,
+    onSelectShop = undefined
+  }: {
+    shops: Shop[]
+    selectedShopId?: string | null
+    userLocation: { lat: number; lng: number } | null
+    routeGeometry: GeoJsonObject | null
+    isNavigating?: boolean
     recenterTrigger?: number
+    onSelectShop?: (id: string) => void
   } = $props()
 
   let mapEl: HTMLDivElement
@@ -29,94 +45,105 @@
   let routeLayer: GeoJSON | null = null
   let lastTrigger = 0
 
-function addMarkers() {
+  function addMarkers() {
     if (!map || !L) return
-    Object.values(markers).forEach(m => m.remove())
+    Object.values(markers).forEach((m) => m.remove())
     markers = {}
 
-    // If no shops match the filter, bail out early
     if (shops.length === 0) return
 
-    // 1. Create an empty bounding box
     const bounds = L!.latLngBounds([])
 
     shops.forEach((shop) => {
-      const m = L!.marker([shop.lat, shop.lng])
-        .addTo(map!)
-        .bindPopup(`
-          <div style="text-align: center; font-family: sans-serif; color: #111;">
-            <b style="font-size: 14px;">${shop.name}</b><br>
-            <span style="color: #666; font-size: 12px;">${shop.category}</span><br>
-            <a href="/shops/${shop.id}" style="display: inline-block; margin-top: 8px; background: #0d58b0; color: white; padding: 5px 10px; border-radius: 4px; text-decoration: none; font-size: 11px; font-weight: 600;">View Shop</a>
-          </div>
-        `)
-      markers[shop.id] = m
+      const icon = L!.divIcon({
+        className: 'budol-marker-wrap',
+        html: shopPinHtml(),
+        iconSize: [28, 36],
+        iconAnchor: [14, 36],
+        popupAnchor: [0, -36]
+      })
 
-      // 2. Expand the bounding box to include this pin's exact location
+      const m = L!.marker([shop.lat, shop.lng], { icon })
+        .addTo(map!)
+        .on('click', () => onSelectShop?.(shop.id))
+        .bindPopup(
+          shopPopupHtml({
+            id: shop.id,
+            name: shop.name,
+            category: shop.category,
+            flashDeal: hasFlashDeal(shop.id)
+          }),
+          { className: 'budol-leaflet-popup', maxWidth: 240 }
+        )
+
+      markers[shop.id] = m
       bounds.extend([shop.lat, shop.lng])
     })
 
-    // 3. Elegantly frame the remaining pins! 
-    // (We only want to do this if we aren't currently focused on a specific shop or navigating)
     if (!selectedShopId && !isNavigating) {
-      // pad by 50px so pins don't get cut off at the very edge of the screen
       map!.flyToBounds(bounds, { padding: [50, 50], animate: true, duration: 1.2 })
     }
   }
 
-  $effect(() => { void shops; addMarkers() })
+  $effect(() => {
+    void shops
+    addMarkers()
+  })
 
-  // Live GPS Marker Logic
   $effect(() => {
     if (map && L && userLocation) {
       if (userMarker) userMarker.remove()
-      
+
       const userIcon = L.divIcon({
         className: 'user-gps-marker',
         html: `<div class="gps-dot"></div><div class="gps-pulse"></div>`,
         iconSize: [20, 20],
         iconAnchor: [10, 10]
       })
-      userMarker = L.marker([userLocation.lat, userLocation.lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map)
-      
+      userMarker = L.marker([userLocation.lat, userLocation.lng], {
+        icon: userIcon,
+        zIndexOffset: 1000
+      }).addTo(map)
+
       if (isNavigating) {
         map.flyTo([userLocation.lat, userLocation.lng], 18, { animate: true, duration: 0.5 })
       }
     }
   })
 
-  // FIXED: Camera Snap-to-User Logic
   $effect(() => {
     if (map && userLocation && recenterTrigger > lastTrigger) {
-      // Changed zoom level from 15 to 18 for a tight, street-level zoom!
       map.flyTo([userLocation.lat, userLocation.lng], 18, { animate: true, duration: 1.2 })
       lastTrigger = recenterTrigger
     }
   })
 
-  // Routing Path Logic
   $effect(() => {
     if (map && L) {
       if (routeLayer) routeLayer.remove()
-      
+
       if (routeGeometry) {
         routeLayer = L.geoJSON(routeGeometry, {
-          style: { color: '#3b82f6', weight: 6, opacity: 0.8, lineCap: 'round', lineJoin: 'round' }
+          style: {
+            color: MAP_COLORS.budolOrange,
+            weight: 5,
+            opacity: 0.85,
+            lineCap: 'round',
+            lineJoin: 'round'
+          }
         }).addTo(map)
 
         if (!isNavigating && recenterTrigger === lastTrigger) {
           map.fitBounds(routeLayer.getBounds(), { padding: [50, 50], animate: true, duration: 1 })
         }
-      } 
-      else if (selectedShopId && markers[selectedShopId] && !isNavigating) {
-        const shop = shops.find(s => s.id === selectedShopId)
+      } else if (selectedShopId && markers[selectedShopId] && !isNavigating) {
+        const shop = shops.find((s) => s.id === selectedShopId)
         if (shop) {
-          const zoomLevel = 16;
-          // Calculate the offset so the pin isn't hidden behind the bottom sheet
-          const targetLatLng = L!.latLng(shop.lat, shop.lng);
-          const targetPoint = map!.project(targetLatLng, zoomLevel);
-          targetPoint.y -= 160; // Shifts the camera target down by 160px
-          const offsetLatLng = map!.unproject(targetPoint, zoomLevel);
+          const zoomLevel = 16
+          const targetLatLng = L!.latLng(shop.lat, shop.lng)
+          const targetPoint = map!.project(targetLatLng, zoomLevel)
+          targetPoint.y -= 160
+          const offsetLatLng = map!.unproject(targetPoint, zoomLevel)
 
           map!.flyTo(offsetLatLng, zoomLevel, { animate: true, duration: 1.2 })
           markers[selectedShopId].openPopup()
@@ -130,19 +157,152 @@ function addMarkers() {
     await import('leaflet/dist/leaflet.css')
     map = L.map(mapEl, { zoomControl: false }).setView([8.0167, 125.0333], 9)
     L.control.zoom({ position: 'bottomright' }).addTo(map)
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors', maxZoom: 19 }).addTo(map)
+    L.tileLayer(MAP_TILE_URL, { attribution: MAP_TILE_ATTRIBUTION, maxZoom: 19 }).addTo(map)
     addMarkers()
   })
 
-  onDestroy(() => { if (map) map.remove() })
+  onDestroy(() => {
+    if (map) map.remove()
+  })
 </script>
 
-<div bind:this={mapEl} style="height: 100%; width: 100%; z-index: 1;"></div>
+<div bind:this={mapEl} class="map-root"></div>
 
 <style>
-  :global(.leaflet-popup-content-wrapper) { border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-  :global(.user-gps-marker) { display: flex; align-items: center; justify-content: center; position: relative; }
-  :global(.gps-dot) { position: absolute; width: 14px; height: 14px; background: #10b981; border: 3px solid white; border-radius: 50%; z-index: 2; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
-  :global(.gps-pulse) { position: absolute; width: 44px; height: 44px; background: rgba(16, 185, 129, 0.4); border-radius: 50%; animation: gpsPulse 2s infinite ease-out; z-index: 1; }
-  @keyframes gpsPulse { 0% { transform: scale(0.1); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+  .map-root {
+    height: 100%;
+    width: 100%;
+    z-index: 1;
+  }
+
+  /* Budol shop pins — orange only */
+  :global(.budol-marker-wrap) {
+    background: none !important;
+    border: none !important;
+  }
+
+  :global(.budol-shop-pin) {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s ease, filter 0.15s ease;
+    transform-origin: bottom center;
+  }
+
+  :global(.budol-shop-pin:hover) {
+    transform: scale(1.1);
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.28));
+  }
+
+  /* User location — pin-blue only */
+  :global(.user-gps-marker) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  :global(.gps-dot) {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: var(--pin-blue);
+    border: 3px solid white;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: 0 0 10px rgba(33, 150, 243, 0.55);
+  }
+
+  :global(.gps-pulse) {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    background: rgba(33, 150, 243, 0.35);
+    border-radius: 50%;
+    animation: gpsPulse 2s infinite ease-out;
+    z-index: 1;
+  }
+
+  @keyframes gpsPulse {
+    0% {
+      transform: scale(0.1);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1.5);
+      opacity: 0;
+    }
+  }
+
+  /* Pop-up cards — bg-card */
+  :global(.budol-leaflet-popup .leaflet-popup-content-wrapper) {
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--border);
+    padding: 0;
+  }
+
+  :global(.budol-leaflet-popup .leaflet-popup-content) {
+    margin: 0;
+    min-width: 180px;
+  }
+
+  :global(.budol-leaflet-popup .leaflet-popup-tip) {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    box-shadow: none;
+  }
+
+  :global(.budol-popup) {
+    padding: 14px 16px;
+    text-align: center;
+    font-family: var(--font-sans);
+    color: var(--text-dark);
+  }
+
+  :global(.budol-popup-deal) {
+    display: inline-block;
+    margin-bottom: 8px;
+    padding: 3px 8px;
+    background: var(--alert-red);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: var(--radius-pill);
+  }
+
+  :global(.budol-popup-title) {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 4px;
+  }
+
+  :global(.budol-popup-cat) {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  :global(.budol-popup-btn) {
+    display: inline-block;
+    background: var(--budol-orange);
+    color: white;
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 600;
+    transition: background 0.15s;
+  }
+
+  :global(.budol-popup-btn:hover) {
+    background: var(--budol-orange-hover);
+  }
 </style>
