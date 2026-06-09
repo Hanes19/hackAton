@@ -70,6 +70,7 @@
     {#if loading}
       <span class="nav-muted">…</span>
     {:else if session.user}
+      <a href="/orders" class="nav-link" class:active={isActive('/orders')}>My Orders</a>
       <a href="/dashboard" class="nav-link" class:active={isActive('/dashboard')}>
         {session.hasShop ? 'Seller Dashboard' : 'Become a Seller'}
       </a>

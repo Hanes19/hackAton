@@ -8,7 +8,7 @@ const SYSTEM_PROMPT = `You are Budol Assistant, the AI helper for Budol Map — 
 You help users with:
 1. **Navigation** — guide them to the right page in the app
 2. **Seller onboarding** — explain how to register and set up a shop
-3. **Product discovery** — when search results are provided, recommend matching shops/products
+3. **Product discovery** — when the user asks for a specific item (food, clothing, etc.), use the search matches in context. List product names, prices, and shop names clearly.
 4. **General chat** — answer questions warmly and concisely
 
 App pages:
@@ -43,26 +43,65 @@ function getSupabase() {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY)
 }
 
+const STOP_WORDS = new Set([
+  'the', 'and', 'for', 'you', 'can', 'how', 'where', 'find', 'search',
+  'looking', 'want', 'need', 'buy', 'get', 'shop', 'store', 'item', 'product',
+  'please', 'help', 'show', 'any', 'are', 'there', 'what', 'which', 'that',
+  'this', 'with', 'from', 'have', 'has', 'sell', 'selling', 'near', 'me',
+  'some', 'something', 'about', 'does', 'do', 'did', 'like', 'best', 'cheap',
+  'available', 'bukidnon', 'local'
+])
+
+const SEARCH_PREFIX =
+  /^(?:find|search(?:\s+for)?|look(?:ing)?\s+for|where\s+(?:can\s+i\s+)?(?:buy|get|find)|do\s+you\s+have|show\s+me|i\s+(?:want|need)|any|are\s+there|who\s+sells|saan\s+(?:may|ang)|hanap(?:in)?(?:\s+ko)?|meron\s+ba(?:ng)?)\s+/i
+
 function tokenize(text) {
   return text
     .toLowerCase()
     .replace(/[^\w\s]/g, ' ')
     .split(/\s+/)
-    .filter((w) => w.length > 2)
+    .filter((w) => w.length > 1)
+}
+
+function extractSearchTerms(query) {
+  let cleaned = query.trim().toLowerCase()
+  cleaned = cleaned.replace(SEARCH_PREFIX, '')
+  cleaned = cleaned.replace(/\s+(?:near me|in bukidnon|please|\?)$/i, '').trim()
+
+  const tokens = tokenize(cleaned)
+  const keywords = tokens.filter((t) => !STOP_WORDS.has(t))
+  return keywords.length > 0 ? keywords : tokens.filter((t) => t.length > 2)
+}
+
+function scoreProductMatch(terms, shop, product) {
+  const name = (product.name || '').toLowerCase()
+  const desc = (product.description || '').toLowerCase()
+  const sub = (product.subcategory || '').toLowerCase()
+  const highlights = (product.highlights || '').toLowerCase()
+  const shopName = (shop.name || '').toLowerCase()
+
+  let score = 0
+  const nameHits = terms.filter((t) => name.includes(t)).length
+  const allInName = terms.length > 0 && terms.every((t) => name.includes(t))
+
+  if (allInName) score += 20
+  score += nameHits * 5
+
+  for (const term of terms) {
+    if (desc.includes(term)) score += 2
+    if (sub.includes(term)) score += 3
+    if (highlights.includes(term)) score += 2
+    if (shopName.includes(term)) score += 1
+  }
+
+  if (name === terms.join(' ')) score += 25
+
+  return score
 }
 
 function searchCatalog(query, shops) {
-  const tokens = tokenize(query)
-  if (tokens.length === 0) return []
-
-  const stopWords = new Set([
-    'the', 'and', 'for', 'you', 'can', 'how', 'where', 'find', 'search',
-    'looking', 'want', 'need', 'buy', 'get', 'shop', 'store', 'item', 'product',
-    'please', 'help', 'show', 'any', 'are', 'there', 'what', 'which', 'that',
-    'this', 'with', 'from', 'have', 'has', 'sell', 'selling', 'near', 'me'
-  ])
-  const keywords = tokens.filter((t) => !stopWords.has(t))
-  const terms = keywords.length > 0 ? keywords : tokens
+  const terms = extractSearchTerms(query)
+  if (terms.length === 0) return []
 
   const results = []
   const seen = new Set()
@@ -71,9 +110,7 @@ function searchCatalog(query, shops) {
     const shopText = `${shop.name} ${shop.category} ${shop.description || ''} ${shop.address || ''}`.toLowerCase()
 
     for (const product of shop.products || []) {
-      const productText = `${product.name} ${product.description || ''}`.toLowerCase()
-      const haystack = `${shopText} ${productText}`
-      const score = terms.filter((t) => haystack.includes(t)).length
+      const score = scoreProductMatch(terms, shop, product)
       if (score > 0) {
         const key = `${shop.id}:${product.id}`
         if (!seen.has(key)) {
@@ -85,12 +122,28 @@ function searchCatalog(query, shops) {
 
     const shopScore = terms.filter((t) => shopText.includes(t)).length
     if (shopScore > 0 && !seen.has(`${shop.id}:shop`)) {
-      seen.add(`${shop.id}:shop`)
-      results.push({ shop, product: null, score: shopScore })
+      const hasProductHit = results.some((r) => r.shop.id === shop.id && r.product)
+      if (!hasProductHit) {
+        seen.add(`${shop.id}:shop`)
+        results.push({ shop, product: null, score: shopScore })
+      }
     }
   }
 
-  return results.sort((a, b) => b.score - a.score).slice(0, 5)
+  return results.sort((a, b) => b.score - a.score).slice(0, 8)
+}
+
+function matchesToResults(matches) {
+  return matches.map(({ shop, product }) => ({
+    shopId: shop.id,
+    shopName: shop.name,
+    shopCategory: shop.category,
+    productId: product?.id ?? null,
+    productName: product?.name ?? null,
+    price: product?.price != null ? Number(product.price) : null,
+    image: product?.image_data ?? null,
+    url: `/shops/${shop.id}`
+  }))
 }
 
 function buildCatalogSummary(shops) {
@@ -119,12 +172,23 @@ function parseActions(text) {
   }
 }
 
-function actionsFromMatches(matches) {
-  return matches.slice(0, 3).map(({ shop, product }) => ({
+function actionsFromMatches(matches, query) {
+  const actions = matches.slice(0, 3).map(({ shop, product }) => ({
     type: 'navigate',
     url: `/shops/${shop.id}`,
-    label: product ? `View ${product.name} at ${shop.name}` : `Visit ${shop.name}`
+    label: product ? `${product.name} · ${shop.name}` : `Visit ${shop.name}`
   }))
+
+  const terms = extractSearchTerms(query)
+  if (terms.length > 0 && matches.length > 0) {
+    actions.push({
+      type: 'navigate',
+      url: `/map?q=${encodeURIComponent(terms.join(' '))}`,
+      label: 'Show on map'
+    })
+  }
+
+  return actions
 }
 
 function fallbackReply(message, matches, page) {
@@ -163,13 +227,21 @@ function fallbackReply(message, matches, page) {
   }
 
   if (matches.length > 0) {
-    const top = matches[0]
-    const productLine = top.product
-      ? `"${top.product.name}" (₱${top.product.price}) at ${top.shop.name}`
-      : top.shop.name
+    const productMatches = matches.filter((m) => m.product)
+    const lines = productMatches.slice(0, 4).map(({ shop, product }) => {
+      const price = product.price != null ? `₱${Number(product.price).toLocaleString()}` : ''
+      return `• **${product.name}** ${price} — ${shop.name}`
+    })
+
+    const header =
+      productMatches.length > 0
+        ? `I found ${productMatches.length} product${productMatches.length > 1 ? 's' : ''} matching your search:`
+        : `I found ${matches.length} shop${matches.length > 1 ? 's' : ''} that might match:`
+
     return {
-      message: `I found ${matches.length} match${matches.length > 1 ? 'es' : ''} for your search. Top result: ${productLine}. Tap below to view the shop!`,
-      actions: actionsFromMatches(matches)
+      message: `${header}\n\n${lines.join('\n')}\n\nTap a result below to open the shop or view them on the map.`,
+      actions: actionsFromMatches(matches, message),
+      results: matchesToResults(matches)
     }
   }
 
@@ -263,13 +335,26 @@ router.post('/', async (req, res) => {
     if (aiText) {
       const { message: reply, actions } = parseActions(aiText)
       const mergedActions =
-        actions.length > 0 ? actions : matches.length > 0 ? actionsFromMatches(matches) : []
+        actions.length > 0
+          ? actions
+          : matches.length > 0
+            ? actionsFromMatches(matches, message.trim())
+            : []
 
-      return res.json({ message: reply, actions: mergedActions, matches: matches.length })
+      return res.json({
+        message: reply,
+        actions: mergedActions,
+        results: matches.length > 0 ? matchesToResults(matches) : [],
+        matches: matches.length
+      })
     }
 
     const fallback = fallbackReply(message.trim(), matches, page)
-    return res.json({ ...fallback, matches: matches.length })
+    return res.json({
+      ...fallback,
+      results: fallback.results ?? (matches.length > 0 ? matchesToResults(matches) : []),
+      matches: matches.length
+    })
   } catch (err) {
     console.error('Assistant error:', err)
     res.status(500).json({ error: 'Assistant unavailable. Please try again.' })

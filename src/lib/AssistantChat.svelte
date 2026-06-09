@@ -1,32 +1,38 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
   import { page } from '$app/stores'
-  import { sendAssistantMessage, type ChatMessage } from '$lib/assistant'
+  import { sendAssistantMessage, type ChatMessage, type ProductSearchResult } from '$lib/assistant'
+  import { assistantPanelOpen } from '$lib/assistantPanel'
 
-  export const SIDEBAR_WIDTH_OPEN = 360
-  export const SIDEBAR_WIDTH_COLLAPSED = 52
+  function closePanel() {
+    assistantPanelOpen.set(false)
+  }
 
-  let open = $state(false)
+  function togglePanel() {
+    assistantPanelOpen.update((v) => !v)
+  }
   let input = $state('')
   let loading = $state(false)
   let messages = $state<ChatMessage[]>([
     {
       role: 'assistant',
       content:
-        "Hi! I'm Budol Assistant. I can help you find products, navigate the app, or guide you through setting up your shop. What can I help with?",
+        "Hi! I'm Budol Assistant. Ask me for a specific product — like \"pandesal\", \"adobo\", or \"coffee\" — and I'll find it on Budol Map.",
       actions: [
-        { type: 'navigate', url: '/map', label: 'Browse Shops' },
-        { type: 'navigate', url: '/register', label: 'Register as Seller' }
+        { type: 'navigate', url: '/map', label: 'Browse map' },
+        { type: 'navigate', url: '/register', label: 'Become a seller' }
       ]
     }
   ])
 
   const quickPrompts = [
-    'Find food near me',
-    'How do I register my shop?',
-    'Take me to the map',
-    'Help me add a product'
+    { label: 'Find pandesal', icon: '🥐' },
+    { label: 'Search adobo chicken', icon: '🍗' },
+    { label: 'Coffee near me', icon: '☕' },
+    { label: 'How do I register my shop?', icon: '🏪' }
   ]
+
+  let isMapPage = $derived($page.url.pathname.startsWith('/map'))
 
   async function send(text?: string) {
     const content = (text ?? input).trim()
@@ -43,7 +49,8 @@
         {
           role: 'assistant',
           content: res.message,
-          actions: res.actions?.length ? res.actions : undefined
+          actions: res.actions?.length ? res.actions : undefined,
+          results: res.results?.length ? res.results : undefined
         }
       ]
     } catch {
@@ -68,289 +75,337 @@
 
   function navigate(url: string) {
     goto(url)
+    closePanel()
+  }
+
+  function openResult(result: ProductSearchResult) {
+    goto(result.url)
+    closePanel()
   }
 </script>
 
 <svelte:window
   onkeydown={(e) => {
-    if (e.key === 'Escape' && open) open = false
+    if (e.key === 'Escape' && $assistantPanelOpen) closePanel()
   }}
 />
 
-{#if open}
-  <button class="mobile-backdrop" onclick={() => (open = false)} aria-label="Close assistant"></button>
-{/if}
+{#if $assistantPanelOpen}
+  <button class="backdrop" onclick={closePanel} aria-label="Close assistant"></button>
 
-<aside class="assistant-sidebar" class:open aria-label="Budol Assistant panel">
-  {#if open}
-    <div class="chat-panel">
-      <header class="chat-header">
-        <div class="header-accent"></div>
-        <div class="header-row">
-          <div class="header-info">
-            <span class="avatar">✦</span>
-            <div>
-              <strong>Budol Assistant</strong>
-              <span class="status"><span class="status-dot"></span> Online</span>
-            </div>
-          </div>
-          <button class="collapse-btn" onclick={() => (open = false)} aria-label="Collapse assistant">
-            <span class="collapse-icon">›</span>
-          </button>
+  <aside class="chat-drawer" aria-label="Budol Assistant">
+    <header class="drawer-header">
+      <div class="header-brand">
+        <span class="avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 3l1.8 5.5H19l-4.5 3.3 1.7 5.2L12 13.8 7.8 17l1.7-5.2L5 8.5h5.2L12 3z" fill="currentColor" />
+          </svg>
+        </span>
+        <div>
+          <strong>Budol Assistant</strong>
+          <span class="status"><span class="status-dot"></span> Ready to help</span>
         </div>
-      </header>
+      </div>
+      <button type="button" class="close-btn" onclick={closePanel} aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
+    </header>
 
-      <div class="messages">
-        {#each messages as msg}
-          <div class="msg-row" class:user={msg.role === 'user'}>
+    <div class="messages" role="log" aria-live="polite">
+      {#each messages as msg, i (i)}
+        <div class="msg-row" class:user={msg.role === 'user'}>
+          {#if msg.role === 'assistant'}
+            <span class="msg-avatar" aria-hidden="true">✦</span>
+          {/if}
+          <div class="msg-stack">
             <div class="bubble" class:user={msg.role === 'user'}>
               {msg.content}
             </div>
+            {#if msg.results?.length}
+              <div class="result-list">
+                {#each msg.results as result (result.shopId + (result.productId ?? 'shop'))}
+                  <button type="button" class="result-card" onclick={() => openResult(result)}>
+                    {#if result.image}
+                      <img src={result.image} alt="" class="result-img" />
+                    {:else}
+                      <div class="result-img placeholder">{result.productName ? '🍽' : '🏪'}</div>
+                    {/if}
+                    <div class="result-body">
+                      <strong>{result.productName ?? result.shopName}</strong>
+                      <span class="result-meta">
+                        {#if result.productName}
+                          {result.shopName}
+                          {#if result.shopCategory} · {result.shopCategory}{/if}
+                        {:else}
+                          {result.shopCategory ?? 'Shop'}
+                        {/if}
+                      </span>
+                    </div>
+                    {#if result.price != null}
+                      <span class="result-price">₱{result.price.toLocaleString()}</span>
+                    {/if}
+                  </button>
+                {/each}
+              </div>
+            {/if}
             {#if msg.actions?.length}
               <div class="action-row">
                 {#each msg.actions as action}
-                  <button class="action-btn" onclick={() => navigate(action.url)}>
-                    {action.label} →
+                  <button type="button" class="action-btn" onclick={() => navigate(action.url)}>
+                    {action.label}
                   </button>
                 {/each}
               </div>
             {/if}
           </div>
-        {/each}
-        {#if loading}
-          <div class="msg-row">
-            <div class="bubble typing">Thinking...</div>
+        </div>
+      {/each}
+
+      {#if loading}
+        <div class="msg-row">
+          <span class="msg-avatar" aria-hidden="true">✦</span>
+          <div class="bubble typing" aria-label="Assistant is thinking">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
           </div>
-        {/if}
-      </div>
+        </div>
+      {/if}
+    </div>
 
-      <div class="quick-row">
-        {#each quickPrompts as prompt}
-          <button class="quick-chip" onclick={() => send(prompt)} disabled={loading}>{prompt}</button>
+    <div class="drawer-footer">
+      <div class="quick-grid">
+        {#each quickPrompts as prompt (prompt.label)}
+          <button
+            type="button"
+            class="quick-card"
+            onclick={() => send(prompt.label)}
+            disabled={loading}
+          >
+            <span class="quick-icon">{prompt.icon}</span>
+            <span class="quick-label">{prompt.label}</span>
+          </button>
         {/each}
       </div>
 
-      <div class="input-row">
+      <div class="composer">
         <textarea
           bind:value={input}
           onkeydown={handleKeydown}
-          placeholder="Ask anything — find products, navigate, seller help..."
+          placeholder="Search a product — e.g. pandesal, adobo, coffee…"
           rows="1"
           disabled={loading}
+          aria-label="Message to assistant"
         ></textarea>
-        <button class="send-btn" onclick={() => send()} disabled={loading || !input.trim()} aria-label="Send">
-          ↑
+        <button
+          type="button"
+          class="send-btn"
+          onclick={() => send()}
+          disabled={loading || !input.trim()}
+          aria-label="Send message"
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
         </button>
       </div>
     </div>
+  </aside>
+{/if}
+
+{#if !isMapPage}
+<button
+  type="button"
+  class="fab"
+  class:open={$assistantPanelOpen}
+  onclick={togglePanel}
+  aria-label={$assistantPanelOpen ? 'Close Budol Assistant' : 'Open Budol Assistant'}
+  aria-expanded={$assistantPanelOpen}
+>
+  {#if $assistantPanelOpen}
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+    </svg>
   {:else}
-    <button class="expand-rail" onclick={() => (open = true)} aria-label="Open Budol Assistant">
-      <span class="rail-icon">✦</span>
-      <span class="rail-label">AI</span>
-    </button>
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 3l1.2 3.7H17l-3 2.2 1.1 3.5L12 10.8 8.9 12.4l1.1-3.5-3-2.2h3.8L12 3z" fill="currentColor" />
+      <path d="M6 18.5c1.8-2.2 4-3.3 6-3.3s4.2 1.1 6 3.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+    </svg>
+    <span class="fab-label">Ask AI</span>
   {/if}
-</aside>
+</button>
+{/if}
 
 <style>
-  .assistant-sidebar {
-    --sidebar-width: 52px;
-    flex-shrink: 0;
-    width: var(--sidebar-width);
-    height: 100vh;
-    position: sticky;
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 8998;
+    background: rgba(0, 0, 0, 0.32);
+    border: none;
+    cursor: pointer;
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .chat-drawer {
+    position: fixed;
     top: 0;
-    z-index: 9000;
+    right: 0;
+    z-index: 8999;
+    width: min(400px, 100vw);
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
     background: var(--bg-card);
     border-left: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -12px 0 40px rgba(0, 0, 0, 0.12);
     font-family: var(--font-sans);
-    overflow: hidden;
-    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.04);
+    animation: slideIn 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .assistant-sidebar.open {
-    --sidebar-width: 360px;
+  @keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
   }
 
-  .mobile-backdrop {
-    display: none;
-  }
-
-  .expand-rail {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    width: 100%;
-    border: none;
-    background: var(--bg-card);
-    color: var(--budol-orange);
-    cursor: pointer;
-    padding: 16px 0;
-    transition: background 0.2s;
-  }
-
-  .expand-rail:hover {
-    background: var(--primary-light);
-  }
-
-  .rail-icon {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: var(--primary-light);
-    font-size: 14px;
-    font-weight: 800;
-    line-height: 1;
-  }
-
-  .rail-label {
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    color: var(--text-muted);
-    text-transform: uppercase;
-  }
-
-  .chat-panel {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-width: 360px;
-    animation: panelIn 0.22s ease;
-    background: var(--bg);
-  }
-
-  @keyframes panelIn {
-    from {
-      opacity: 0;
-      transform: translateX(12px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-
-  .chat-header {
-    flex-shrink: 0;
-    background: var(--bg-card);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .header-accent {
-    height: 3px;
-    background: var(--gradient-brand);
-  }
-
-  .header-row {
+  .drawer-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 16px;
+    gap: 12px;
+    padding: 16px 18px;
+    background: linear-gradient(135deg, var(--budol-orange) 0%, var(--budol-orange-hover) 100%);
+    color: white;
+    flex-shrink: 0;
   }
 
-  .header-info {
+  .header-brand {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
+    min-width: 0;
   }
 
   .avatar {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 10px;
-    background: var(--primary-light);
-    color: var(--budol-orange);
-    font-size: 16px;
-    font-weight: 800;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
   }
 
-  .header-info strong {
+  .avatar svg {
+    width: 22px;
+    height: 22px;
+    color: white;
+  }
+
+  .header-brand strong {
     display: block;
-    color: var(--text-dark);
-    font-size: 14px;
-    font-weight: 700;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
   }
 
   .status {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    color: var(--text-muted);
+    gap: 6px;
+    font-size: 12px;
+    opacity: 0.92;
   }
 
   .status-dot {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    background: var(--success);
-    box-shadow: 0 0 0 2px var(--success-bg);
+    background: #a5f3b4;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
   }
 
-  .collapse-btn {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text-muted);
+  .close-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    color: white;
     cursor: pointer;
-    width: 32px;
-    height: 32px;
-    border-radius: var(--radius-sm);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.15s ease;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
   }
 
-  .collapse-btn:hover {
-    border-color: var(--budol-orange);
-    color: var(--budol-orange);
-    background: var(--primary-light);
+  .close-btn:hover {
+    background: rgba(255, 255, 255, 0.28);
   }
 
-  .collapse-icon {
-    font-size: 18px;
-    line-height: 1;
-    font-weight: 700;
+  .close-btn svg {
+    width: 18px;
+    height: 18px;
   }
 
   .messages {
     flex: 1;
     overflow-y: auto;
-    padding: 16px;
+    padding: 18px 16px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
     min-height: 0;
+    background: var(--bg);
   }
 
   .msg-row {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
+    align-items: flex-end;
+    gap: 8px;
+    max-width: 100%;
   }
 
   .msg-row.user {
+    flex-direction: row-reverse;
+  }
+
+  .msg-avatar {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--primary-light);
+    color: var(--budol-orange);
+    font-size: 12px;
+    font-weight: 800;
+    flex-shrink: 0;
+    margin-bottom: 2px;
+  }
+
+  .msg-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: calc(100% - 36px);
+  }
+
+  .msg-row.user .msg-stack {
     align-items: flex-end;
   }
 
   .bubble {
-    max-width: 88%;
-    padding: 10px 14px;
+    padding: 11px 14px;
     border-radius: 16px 16px 16px 4px;
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -365,31 +420,48 @@
     background: var(--budol-orange);
     border-color: var(--budol-orange);
     border-radius: 16px 16px 4px 16px;
-    color: var(--text-inverse);
+    color: white;
     box-shadow: none;
   }
 
   .bubble.typing {
-    color: var(--text-muted);
-    font-style: italic;
-    box-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 14px 16px;
+    min-width: 56px;
+  }
+
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    animation: bounce 1.2s infinite ease-in-out;
+  }
+
+  .dot:nth-child(2) { animation-delay: 0.15s; }
+  .dot:nth-child(3) { animation-delay: 0.3s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.45; }
+    40% { transform: translateY(-5px); opacity: 1; }
   }
 
   .action-row {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    max-width: 100%;
   }
 
   .action-btn {
     background: var(--bg-card);
-    border: 1px solid var(--border-strong);
+    border: 1px solid var(--border);
     color: var(--budol-orange);
     padding: 6px 12px;
     border-radius: var(--radius-pill);
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.15s ease;
   }
@@ -400,86 +472,181 @@
     color: white;
   }
 
-  .quick-row {
+  .result-list {
     display: flex;
-    gap: 6px;
-    padding: 0 12px 8px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    flex-shrink: 0;
-    background: var(--bg);
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
   }
 
-  .quick-row::-webkit-scrollbar {
-    display: none;
-  }
-
-  .quick-chip {
-    flex-shrink: 0;
-    background: var(--bg-card);
+  .result-card {
+    display: grid;
+    grid-template-columns: 48px 1fr auto;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+    padding: 10px;
     border: 1px solid var(--border);
-    color: var(--text-muted);
-    padding: 6px 12px;
-    border-radius: var(--radius-pill);
-    font-size: 11px;
-    font-weight: 500;
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
     cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .result-card:hover {
+    border-color: var(--budol-orange);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .result-img {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+  }
+
+  .result-img.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    font-size: 20px;
+  }
+
+  .result-body {
+    min-width: 0;
+  }
+
+  .result-body strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-dark);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .result-meta {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .result-price {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--budol-orange);
+    white-space: nowrap;
+  }
+
+  .drawer-footer {
+    flex-shrink: 0;
+    padding: 12px 14px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-card);
+  }
+
+  .quick-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .quick-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px;
+    text-align: left;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    cursor: pointer;
+    font-family: inherit;
     transition: all 0.15s ease;
   }
 
-  .quick-chip:hover:not(:disabled) {
+  .quick-card:hover:not(:disabled) {
     border-color: var(--budol-orange);
-    color: var(--budol-orange);
     background: var(--primary-light);
   }
 
-  .quick-chip:disabled {
+  .quick-card:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
 
-  .input-row {
-    display: flex;
-    gap: 8px;
-    padding: 12px;
-    border-top: 1px solid var(--border);
-    background: var(--bg-card);
+  .quick-icon {
+    font-size: 16px;
+    line-height: 1;
     flex-shrink: 0;
   }
 
-  .input-row textarea {
+  .quick-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dark);
+    line-height: 1.35;
+  }
+
+  .composer {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--bg);
+  }
+
+  .composer:focus-within {
+    border-color: var(--budol-orange);
+    box-shadow: 0 0 0 3px var(--primary-light);
+  }
+
+  .composer textarea {
     flex: 1;
     resize: none;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
+    border: none;
+    background: transparent;
     color: var(--text-dark);
-    padding: 10px 12px;
+    padding: 8px 10px;
     font-size: 13px;
     font-family: inherit;
     outline: none;
-    max-height: 80px;
-  }
-
-  .input-row textarea:focus {
-    border-color: var(--budol-orange);
-    box-shadow: 0 0 0 3px var(--primary-light);
+    max-height: 96px;
+    min-height: 36px;
   }
 
   .send-btn {
     width: 40px;
     height: 40px;
-    border-radius: var(--radius-md);
     border: none;
+    border-radius: 50%;
     background: var(--budol-orange);
     color: white;
-    font-size: 18px;
-    font-weight: 700;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
-    align-self: flex-end;
     transition: background 0.15s ease;
+  }
+
+  .send-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .send-btn:hover:not(:disabled) {
+    background: var(--budol-orange-hover);
   }
 
   .send-btn:disabled {
@@ -487,46 +654,73 @@
     cursor: not-allowed;
   }
 
-  .send-btn:not(:disabled):hover {
-    background: var(--budol-orange-hover);
+  .fab {
+    position: fixed;
+    z-index: 8997;
+    right: 20px;
+    bottom: 24px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 22px 0 16px;
+    height: 56px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(135deg, var(--budol-orange) 0%, var(--budol-orange-hover) 100%);
+    color: white;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 28px rgba(255, 87, 34, 0.45);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .fab svg {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+
+  .fab:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(255, 87, 34, 0.5);
+  }
+
+  .fab.open {
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .fab-label {
+    white-space: nowrap;
   }
 
   @media (max-width: 768px) {
-    .assistant-sidebar {
-      position: fixed;
-      top: 0;
-      right: 0;
-      height: 100vh;
-      height: 100dvh;
-      box-shadow: var(--shadow-lg);
+    .chat-drawer {
+      width: 100vw;
+      border-left: none;
     }
 
-    .assistant-sidebar:not(.open) {
-      --sidebar-width: 44px;
+    .quick-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .fab:not(.open) {
+      width: 52px;
+      height: 52px;
+      padding: 0;
+      justify-content: center;
+      border-radius: 50%;
     }
 
-    .assistant-sidebar.open {
-      --sidebar-width: min(360px, 100vw);
-    }
-
-    .mobile-backdrop {
-      display: block;
-      position: fixed;
-      inset: 0;
-      z-index: 8999;
-      background: rgba(0, 0, 0, 0.35);
-      border: none;
-      cursor: pointer;
-      animation: fadeIn 0.2s ease;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-      }
-      to {
-        opacity: 1;
-      }
+    .fab-label {
+      display: none;
     }
   }
 </style>

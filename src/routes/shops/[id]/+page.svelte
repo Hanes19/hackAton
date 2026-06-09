@@ -1,7 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { page } from '$app/stores'
+  import { goto } from '$app/navigation'
   import NavBar from '$lib/NavBar.svelte'
+  import ShopReviews from '$lib/ShopReviews.svelte'
   import {
     formatDetailChips,
     getProductIndustry,
@@ -9,23 +11,17 @@
   } from '$lib/listingCatalog'
   import {
     type MapShop,
-    shopRating,
-    shopReviewCount,
+    type MapProduct,
     priceRange,
     shopThumbnail,
     isOpenNow
   } from '$lib/mapShop'
+  import { cartStore, addToCart, cartCount } from '$lib/cart'
+  import { fetchShopReviews, starsDisplay } from '$lib/reviews'
 
-  interface Product {
-    id: string
-    name: string
-    price: number
+  interface Product extends MapProduct {
     description: string
-    highlights?: string | null
-    listing_type?: string | null
     industry?: string | null
-    subcategory?: string | null
-    image_data?: string | null
     details?: Record<string, string> | null
   }
 
@@ -35,19 +31,47 @@
 
   let shop = $state<Shop | null>(null)
   let error = $state('')
+  let reviewAverage = $state(0)
+  let reviewCount = $state(0)
+
+  let cartQty = $derived(
+    shop && $cartStore?.shopId === shop.id ? $cartCount : 0
+  )
 
   onMount(async () => {
     const id = $page.params.id
     const res = await fetch(`/api/shops/${id}`)
     const data = await res.json()
     if (data.error) error = data.error
-    else shop = data
+    else {
+      shop = data
+      try {
+        const reviews = await fetchShopReviews(id)
+        reviewAverage = reviews.summary.average
+        reviewCount = reviews.summary.count
+      } catch {
+        /* use defaults */
+      }
+    }
   })
 
-  function stars(rating: number): string {
-    const full = Math.floor(rating)
-    const half = rating - full >= 0.5
-    return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(5 - full - (half ? 1 : 0))
+  function handleAdd(product: Product) {
+    if (!shop) return
+    addToCart(shop.id, shop.name, {
+      productId: product.id,
+      name: product.name,
+      price: Number(product.price),
+      image: product.image_data
+    })
+  }
+
+  function goCheckout() {
+    goto('/checkout')
+  }
+
+  function onReviewSummary(summary: { average: number; count: number }) {
+    reviewAverage = summary.average
+    reviewCount = summary.count
   }
 </script>
 
@@ -86,9 +110,9 @@
           </div>
           <h1>{shop.name}</h1>
           <div class="meta-row">
-            <span class="rating-num">{shopRating(shop.id).toFixed(1)}</span>
-            <span class="stars">{stars(shopRating(shop.id))}</span>
-            <span class="reviews">({shopReviewCount(shop.id)} reviews)</span>
+            <span class="rating-num">{reviewCount ? reviewAverage.toFixed(1) : '—'}</span>
+            <span class="stars">{starsDisplay(reviewAverage)}</span>
+            <span class="reviews">({reviewCount} review{reviewCount === 1 ? '' : 's'})</span>
           </div>
           <p class="address">📍 {shop.address || 'Bukidnon, Philippines'}</p>
         </div>
@@ -156,6 +180,9 @@
                       {#each chips as chip}<span class="chip">{chip}</span>{/each}
                     </div>
                   {/if}
+                  <button type="button" class="add-btn" onclick={() => handleAdd(product)}>
+                    Add to cart
+                  </button>
                 </div>
               </article>
             {/each}
@@ -164,7 +191,19 @@
           <p class="empty">No listings yet.</p>
         {/if}
       </section>
+
+      <ShopReviews shopId={shop.id} shopName={shop.name} onSummary={onReviewSummary} />
     </main>
+
+    {#if cartQty > 0}
+      <div class="cart-bar">
+        <div class="cart-bar-info">
+          <strong>{cartQty} item{cartQty === 1 ? '' : 's'} in cart</strong>
+          <span>Ready for checkout</span>
+        </div>
+        <button type="button" class="cart-bar-btn" onclick={goCheckout}>Checkout</button>
+      </div>
+    {/if}
   {/if}
 </div>
 
@@ -341,7 +380,7 @@
   .main {
     max-width: 960px;
     margin: 0 auto;
-    padding: 24px 20px 64px;
+    padding: 24px 20px 100px;
   }
 
   .info-strip {
@@ -515,6 +554,69 @@
     border-radius: var(--radius-pill);
     background: var(--success-bg);
     color: var(--success);
+  }
+
+  .add-btn {
+    margin-top: 10px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: var(--budol-orange);
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+
+  .add-btn:hover {
+    background: var(--budol-orange-hover);
+  }
+
+  .cart-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 20px;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+  }
+
+  .cart-bar-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .cart-bar-info strong {
+    font-size: 14px;
+    color: var(--text-dark);
+  }
+
+  .cart-bar-info span {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .cart-bar-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: var(--budol-orange);
+    color: white;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    white-space: nowrap;
   }
 
   .empty {

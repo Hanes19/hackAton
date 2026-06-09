@@ -484,6 +484,7 @@
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm);
     color: var(--text-dark);
+    caret-color: var(--text-dark);
     font-size: 14px;
     outline: none;
     box-sizing: border-box;

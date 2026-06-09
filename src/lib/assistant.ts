@@ -4,15 +4,28 @@ export interface AssistantAction {
   label: string
 }
 
+export interface ProductSearchResult {
+  shopId: string
+  shopName: string
+  shopCategory?: string
+  productId: string | null
+  productName: string | null
+  price: number | null
+  image?: string | null
+  url: string
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   actions?: AssistantAction[]
+  results?: ProductSearchResult[]
 }
 
 export interface AssistantResponse {
   message: string
   actions: AssistantAction[]
+  results?: ProductSearchResult[]
   matches?: number
   error?: string
 }

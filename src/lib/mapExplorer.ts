@@ -42,7 +42,10 @@ export function filterShops(
     const matchSearch =
       shop.name.toLowerCase().includes(query) ||
       shop.category.toLowerCase().includes(query) ||
-      (shop.products?.some((product) => product.name.toLowerCase().includes(query)) ?? false)
+      (shop.products?.some((product) => {
+        const haystack = `${product.name} ${product.description ?? ''} ${product.subcategory ?? ''}`.toLowerCase()
+        return haystack.includes(query)
+      }) ?? false)
     const matchCategory = selectedCategory === 'All' || shop.category === selectedCategory
     return matchSearch && matchCategory
   })

@@ -25,8 +25,9 @@
   } from '$lib/listingCatalog'
   import type { ListingFormData } from '$lib/listingCatalog'
   import type { User } from '@supabase/supabase-js'
+  import { fetchShopOrders, updateOrderStatus, statusLabel, paymentLabel, type OrderRecord } from '$lib/checkout'
 
-  type Tab = 'overview' | 'setup' | 'listings'
+  type Tab = 'overview' | 'setup' | 'listings' | 'orders'
 
   let user = $state<User | null>(null)
   let shop = $state<SellerShop | null>(null)
@@ -49,6 +50,8 @@
   let editingListingId = $state<string | null>(null)
   let showEditor = $state(false)
   let savingListing = $state(false)
+  let shopOrders = $state<OrderRecord[]>([])
+  let ordersLoading = $state(false)
 
   const categories = ['Food', 'Clothing', 'Electronics', 'Services', 'Health & Beauty', 'Other']
 
@@ -209,6 +212,40 @@
     }
   }
 
+  async function loadOrders() {
+    if (!shop) return
+    ordersLoading = true
+    try {
+      shopOrders = await fetchShopOrders(shop.id)
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Could not load orders.'
+    } finally {
+      ordersLoading = false
+    }
+  }
+
+  async function advanceOrder(order: OrderRecord) {
+    const flow: Record<string, string> = {
+      pending: 'confirmed',
+      paid: 'confirmed',
+      confirmed: 'shipped',
+      shipped: 'completed'
+    }
+    const next = flow[order.status]
+    if (!next) return
+    try {
+      await updateOrderStatus(order.id, next)
+      shopOrders = shopOrders.map((o) => (o.id === order.id ? { ...o, status: next } : o))
+      success = `Order marked as ${statusLabel(next).toLowerCase()}.`
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Could not update order.'
+    }
+  }
+
+  $effect(() => {
+    if (activeTab === 'orders' && shop) void loadOrders()
+  })
+
 </script>
 
 <div class="dashboard-page">
@@ -234,6 +271,9 @@
       <button class="nav-btn" class:active={activeTab === 'listings'} onclick={() => (activeTab = 'listings')} disabled={!shop}>
         <span>{businessType === 'service' ? '🛠' : '📦'}</span>
         {businessType === 'service' ? 'Services' : 'Products'}
+      </button>
+      <button class="nav-btn" class:active={activeTab === 'orders'} onclick={() => (activeTab = 'orders')} disabled={!shop}>
+        <span>🧾</span> Orders
       </button>
     </nav>
 
@@ -399,6 +439,58 @@
               {saving ? 'Saving…' : 'Save & Continue'}
             </button>
           </div>
+        </section>
+
+      {:else if activeTab === 'orders'}
+        <header class="page-header">
+          <div>
+            <h1>Customer orders</h1>
+            <p>Confirm and fulfill orders placed through Budol Map checkout.</p>
+          </div>
+          <button class="secondary-btn" onclick={loadOrders} disabled={ordersLoading}>
+            {ordersLoading ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </header>
+
+        <section class="panel">
+          {#if ordersLoading && !shopOrders.length}
+            <p class="muted">Loading orders…</p>
+          {:else if shopOrders.length === 0}
+            <p class="muted">No orders yet. Orders appear here when customers checkout from your shop.</p>
+          {:else}
+            <div class="order-list">
+              {#each shopOrders as order (order.id)}
+                <article class="order-card">
+                  <div class="order-head">
+                    <div>
+                      <strong>{order.customer_name ?? 'Customer'}</strong>
+                      <span class="order-meta">#{order.id.slice(0, 8).toUpperCase()} · {paymentLabel(order.payment_method)}</span>
+                    </div>
+                    <span class="order-status">{statusLabel(order.status)}</span>
+                  </div>
+                  <ul class="order-items">
+                    {#each order.items as item, i (i)}
+                      <li>{item.quantity}× {item.name}</li>
+                    {/each}
+                  </ul>
+                  {#if order.shipping_address}
+                    <p class="order-address">📍 {order.shipping_address}</p>
+                  {/if}
+                  {#if order.customer_note}
+                    <p class="order-note">Note: {order.customer_note}</p>
+                  {/if}
+                  <div class="order-foot">
+                    <strong>₱{Number(order.total).toLocaleString()}</strong>
+                    {#if order.status !== 'completed' && order.status !== 'cancelled'}
+                      <button class="primary-btn small" onclick={() => advanceOrder(order)}>
+                        {order.status === 'pending' || order.status === 'paid' ? 'Confirm' : order.status === 'confirmed' ? 'Mark shipped' : 'Complete'}
+                      </button>
+                    {/if}
+                  </div>
+                </article>
+              {/each}
+            </div>
+          {/if}
         </section>
 
       {:else}
@@ -973,4 +1065,68 @@
   .empty-state p { color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 1.5rem; }
 
   .muted { color: var(--text-muted); font-size: 14px; }
+
+  .order-list { display: flex; flex-direction: column; gap: 12px; }
+
+  .order-card {
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-inset);
+  }
+
+  .order-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .order-head strong { display: block; font-size: 14px; }
+
+  .order-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: monospace;
+  }
+
+  .order-status {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--primary-light);
+    color: var(--budol-orange);
+    flex-shrink: 0;
+  }
+
+  .order-items {
+    margin: 0 0 8px;
+    padding-left: 16px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .order-address, .order-note {
+    margin: 0 0 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .order-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .order-foot strong { color: var(--budol-orange); font-size: 16px; }
+
+  .primary-btn.small {
+    padding: 7px 14px;
+    font-size: 12px;
+  }
 </style>

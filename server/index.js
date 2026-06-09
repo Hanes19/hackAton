@@ -8,6 +8,7 @@ import productsRouter from './routes/products.js'
 import assistantRouter from './routes/assistant.js'
 import lguRouter from './routes/lgu.js'
 import ordersRouter from './routes/orders.js'
+import reviewsRouter from './routes/reviews.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 dotenv.config({ path: join(__dirname, '.env') })
@@ -26,6 +27,7 @@ app.use('/api/shops', shopsRouter)
 app.use('/api/products', productsRouter)
 app.use('/api/lgu', lguRouter)
 app.use('/api/orders', ordersRouter)
+app.use('/api/reviews', reviewsRouter)
 app.use('/api/assistant', assistantRouter)
 
 app.listen(3001, () => console.log('API running on http://localhost:3001'))

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
+  import { page } from '$app/stores'
   import MapView from '$lib/MapView.svelte'
   import NavBar from '$lib/NavBar.svelte'
   import MapShopPanel from '$lib/MapShopPanel.svelte'
@@ -13,7 +14,10 @@
   } from '$lib/mapExplorer'
   import type { MapShop } from '$lib/mapShop'
   import type { GeoJsonObject } from 'geojson'
+  import type MapViewComponent from '$lib/MapView.svelte'
+  import { assistantPanelOpen } from '$lib/assistantPanel'
 
+  let mapView = $state<MapViewComponent | undefined>(undefined)
   let shops = $state<MapShop[]>([])
   let search = $state('')
   let selectedCategory = $state('All')
@@ -72,6 +76,13 @@
 
   onMount(async () => {
     shops = await fetchMapShops()
+    const q = $page.url.searchParams.get('q')
+    if (q) search = q
+  })
+
+  $effect(() => {
+    const q = $page.url.searchParams.get('q')
+    if (q && q !== search) search = q
   })
 
   function handleGpsClick() {
@@ -108,6 +119,7 @@
 
   <section class="map-stage" aria-label="Shop explorer map">
     <MapView
+      bind:this={mapView}
       shops={filtered}
       selectedShopId={focusedShopId}
       {userLocation}
@@ -139,26 +151,74 @@
       />
     </div>
 
-    <div class="map-controls">
+    <div class="map-dock-stack">
+      {#if !$assistantPanelOpen}
+        <p class="help-bubble" aria-hidden="true">You need help?</p>
+      {/if}
+
       <button
         type="button"
-        class="control-btn gps-btn"
+        class="dock-ai-btn"
+        class:active={$assistantPanelOpen}
+        onclick={() => assistantPanelOpen.update((v) => !v)}
+        aria-label="Open Budol Assistant"
+        aria-expanded={$assistantPanelOpen}
+      >
+        <span class="dock-ai-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 3l1.2 3.6H17l-3 2.2 1.1 3.4L12 10.6 8.9 12.2l1.1-3.4-3-2.2h3.8L12 3z" fill="currentColor" />
+          </svg>
+        </span>
+        <span class="dock-ai-copy">
+          <strong>Ask AI</strong>
+          <small>Search products</small>
+        </span>
+      </button>
+
+      <nav class="map-dock" aria-label="Map controls">
+      <button
+        type="button"
+        class="dock-btn"
+        onclick={() => mapView?.zoomIn()}
+        aria-label="Zoom in"
+      >
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 6v12M6 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
+
+      <button
+        type="button"
+        class="dock-btn"
+        onclick={() => mapView?.zoomOut()}
+        aria-label="Zoom out"
+      >
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
+
+      <span class="dock-divider" aria-hidden="true"></span>
+
+      <button
+        type="button"
+        class="dock-btn locate"
         class:active={gpsActive}
         onclick={handleGpsClick}
         disabled={trackingLoading}
-        title="Center on my location"
-        aria-label="Center on my location"
+        aria-label="Track my location"
       >
         {#if trackingLoading}
-          <span class="control-icon loading" aria-hidden="true"></span>
+          <span class="dock-spinner" aria-hidden="true"></span>
         {:else}
-          <svg class="control-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <circle cx="12" cy="12" r="3" fill="currentColor" />
-            <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2" />
-            <path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" />
+            <circle cx="12" cy="12" r="7.5" stroke="currentColor" stroke-width="1.8" />
+            <path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
           </svg>
         {/if}
       </button>
+      </nav>
     </div>
   </section>
 </div>
@@ -206,58 +266,168 @@
     height: 100%;
   }
 
-  .map-controls {
+  .map-dock-stack {
     position: absolute;
-    bottom: 24px;
+    bottom: 20px;
     right: 16px;
     z-index: 500;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    align-items: flex-end;
+    gap: 10px;
   }
 
-  .control-btn {
-    width: 44px;
-    height: 44px;
-    background: var(--bg-elevated);
+  .help-bubble {
+    margin: 0;
+    padding: 8px 14px;
+    background: var(--bg-card);
     border: 1px solid var(--border);
-    color: var(--primary);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-md);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--budol-orange);
+    animation: bubbleFloat 2.5s ease-in-out infinite;
+    position: relative;
+  }
+
+  .help-bubble::after {
+    content: '';
+    position: absolute;
+    right: 28px;
+    bottom: -6px;
+    width: 12px;
+    height: 12px;
+    background: var(--bg-card);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    transform: rotate(45deg);
+  }
+
+  @keyframes bubbleFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  .dock-ai-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 148px;
+    padding: 12px 16px;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: linear-gradient(135deg, var(--budol-orange) 0%, var(--budol-orange-hover) 100%);
+    color: white;
     cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 8px 28px rgba(255, 87, 34, 0.45);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .dock-ai-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(255, 87, 34, 0.5);
+  }
+
+  .dock-ai-btn.active {
+    outline: 3px solid var(--primary-light);
+  }
+
+  .dock-ai-icon {
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-    transition:
-      background 0.2s,
-      border-color 0.2s,
-      transform 0.15s;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
   }
 
-  .control-btn:hover:not(:disabled) {
-    background: var(--bg2);
-    transform: scale(1.04);
-  }
-
-  .control-btn.active {
-    background: rgba(33, 150, 243, 0.12);
-    border-color: var(--pin-blue);
-    color: var(--pin-blue);
-  }
-
-  .control-btn:disabled {
-    opacity: 0.7;
-    cursor: wait;
-  }
-
-  .control-icon {
+  .dock-ai-icon svg {
     width: 22px;
     height: 22px;
   }
 
-  .control-icon.loading {
+  .dock-ai-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    text-align: left;
+  }
+
+  .dock-ai-copy strong {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+
+  .dock-ai-copy small {
+    font-size: 11px;
+    opacity: 0.9;
+    font-weight: 500;
+  }
+
+  .map-dock {
+    display: flex;
+    flex-direction: column;
+    width: 48px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+
+  .dock-btn {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: var(--bg-card);
+    color: var(--text-dark);
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s ease;
+  }
+
+  .dock-btn svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .dock-btn:hover:not(:disabled) {
+    background: var(--bg);
+  }
+
+  .dock-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
+  }
+
+  .dock-btn.locate {
+    color: var(--pin-blue);
+  }
+
+  .dock-btn.locate.active {
+    background: rgba(33, 150, 243, 0.1);
+  }
+
+  .dock-divider {
+    height: 1px;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+
+  .dock-spinner {
+    width: 20px;
+    height: 20px;
     border: 2px solid var(--border);
-    border-top-color: var(--primary);
+    border-top-color: var(--pin-blue);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
@@ -289,9 +459,28 @@
       transform: translateY(100%);
     }
 
-    .map-controls {
-      bottom: calc(52vh + 16px);
+    .map-dock-stack {
+      top: 72px;
+      bottom: auto;
       right: 12px;
+    }
+
+    .dock-ai-btn {
+      min-width: 0;
+      width: 52px;
+      height: 52px;
+      padding: 0;
+      justify-content: center;
+      border-radius: 50%;
+    }
+
+    .dock-ai-copy {
+      display: none;
+    }
+
+    .help-bubble {
+      font-size: 12px;
+      padding: 6px 12px;
     }
   }
 </style>

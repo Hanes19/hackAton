@@ -2,16 +2,15 @@
   import {
     type MapShop,
     type MapProduct,
-    type CartItem,
-    shopRating,
-    shopReviewCount,
-    priceRange,
     shopThumbnail,
     isOpenNow,
     hasFlashDeal,
     fetchShopDetail,
-    placeOrder
+    priceRange
   } from '$lib/mapShop'
+  import { cartStore, addToCart as cartAdd, updateCartQty } from '$lib/cart'
+  import { fetchShopReviews, starsDisplay } from '$lib/reviews'
+  import { goto } from '$app/navigation'
   import type { TravelMode } from '$lib/mapExplorer'
 
   interface Props {
@@ -50,29 +49,37 @@
   let activeTab = $state<Tab>('overview')
   let detailShop = $state<MapShop | null>(null)
   let detailLoading = $state(false)
-  let cart = $state<CartItem[]>([])
-  let customerNote = $state('')
-  let ordering = $state(false)
-  let orderSuccess = $state(false)
-  let orderError = $state('')
+  let reviewAverage = $state(0)
+  let reviewCount = $state(0)
 
   let displayShop = $derived(detailShop ?? listShop)
-  let cartTotal = $derived(cart.reduce((sum, i) => sum + i.price * i.quantity, 0))
-  let cartCount = $derived(cart.reduce((sum, i) => sum + i.quantity, 0))
+  let cartSession = $derived($cartStore)
+  let cartItems = $derived(cartSession?.shopId === shopId ? cartSession.items : [])
+  let cartTotal = $derived(cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0))
+  let cartCount = $derived(cartItems.reduce((sum, i) => sum + i.quantity, 0))
   let isOpen = $derived(displayShop ? isOpenNow(displayShop.id) : false)
   let flashDeal = $derived(displayShop ? hasFlashDeal(displayShop.id) : false)
 
   $effect(() => {
     void shopId
     activeTab = 'overview'
-    orderSuccess = false
-    orderError = ''
     loadDetail(shopId)
+    loadReviews(shopId)
   })
+
+  async function loadReviews(id: string) {
+    try {
+      const data = await fetchShopReviews(id)
+      reviewAverage = data.summary.average
+      reviewCount = data.summary.count
+    } catch {
+      reviewAverage = 0
+      reviewCount = 0
+    }
+  }
 
   async function loadDetail(id: string) {
     detailLoading = true
-    orderError = ''
     try {
       detailShop = await fetchShopDetail(id)
     } catch {
@@ -82,58 +89,24 @@
     }
   }
 
-  function stars(rating: number): string {
-    const full = Math.floor(rating)
-    const half = rating - full >= 0.5
-    return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(5 - full - (half ? 1 : 0))
-  }
-
   function addToCart(product: MapProduct) {
-    const existing = cart.find((c) => c.productId === product.id)
-    if (existing) {
-      existing.quantity += 1
-      cart = [...cart]
-    } else {
-      cart = [
-        ...cart,
-        {
-          productId: product.id,
-          name: product.name,
-          price: Number(product.price),
-          quantity: 1,
-          image: product.image_data
-        }
-      ]
-    }
+    if (!displayShop) return
+    cartAdd(displayShop.id, displayShop.name, {
+      productId: product.id,
+      name: product.name,
+      price: Number(product.price),
+      image: product.image_data
+    })
     activeTab = 'order'
   }
 
   function updateQty(productId: string, delta: number) {
-    cart = cart
-      .map((c) => (c.productId === productId ? { ...c, quantity: c.quantity + delta } : c))
-      .filter((c) => c.quantity > 0)
+    updateCartQty(productId, delta)
   }
 
-  async function submitOrder() {
-    if (!displayShop || !cart.length) return
-    ordering = true
-    orderError = ''
-    try {
-      await placeOrder({
-        shop_id: displayShop.id,
-        shop_name: displayShop.name,
-        items: cart,
-        total: cartTotal,
-        customer_note: customerNote
-      })
-      orderSuccess = true
-      cart = []
-      customerNote = ''
-    } catch (e) {
-      orderError = e instanceof Error ? e.message : 'Could not place order'
-    } finally {
-      ordering = false
-    }
+  function goCheckout() {
+    if (!cartCount) return
+    goto('/checkout')
   }
 </script>
 
@@ -171,9 +144,9 @@
       </div>
       <h2>{displayShop.name}</h2>
       <div class="meta-row">
-        <span class="rating-num">{shopRating(displayShop.id).toFixed(1)}</span>
-        <span class="stars">{stars(shopRating(displayShop.id))}</span>
-        <span class="reviews">({shopReviewCount(displayShop.id)} reviews)</span>
+        <span class="rating-num">{reviewCount ? reviewAverage.toFixed(1) : '—'}</span>
+        <span class="stars">{starsDisplay(reviewAverage)}</span>
+        <span class="reviews">({reviewCount} review{reviewCount === 1 ? '' : 's'})</span>
       </div>
       <p class="address-line">📍 {displayShop.address || 'Bukidnon, Philippines'}</p>
     </div>
@@ -286,14 +259,7 @@
           <p class="empty">No items listed yet.</p>
         {/if}
       {:else}
-        {#if orderSuccess}
-          <div class="success-card">
-            <span class="success-icon">✓</span>
-            <h3>Order placed!</h3>
-            <p>The shop will confirm shortly.</p>
-            <button type="button" class="ghost-btn" onclick={() => (orderSuccess = false)}>Order more</button>
-          </div>
-        {:else if !cart.length}
+        {#if !cartItems.length}
           <div class="empty-cart">
             <span class="empty-icon">🛒</span>
             <p>Your cart is empty</p>
@@ -301,7 +267,7 @@
           </div>
         {:else}
           <ul class="cart-list">
-            {#each cart as item (item.productId)}
+            {#each cartItems as item (item.productId)}
               <li class="cart-item">
                 <div class="cart-info">
                   <strong>{item.name}</strong>
@@ -316,23 +282,19 @@
               </li>
             {/each}
           </ul>
-          <label class="note-field">
-            Note for shop
-            <textarea bind:value={customerNote} rows="2" placeholder="Optional instructions…"></textarea>
-          </label>
-          {#if orderError}<p class="error">{orderError}</p>{/if}
+          <p class="checkout-hint">Proceed to checkout for delivery, payment, and order confirmation.</p>
         {/if}
       {/if}
     </div>
 
-    {#if activeTab === 'order' && cart.length && !orderSuccess}
+    {#if activeTab === 'order' && cartItems.length}
       <footer class="checkout-bar">
         <div class="checkout-total">
-          <span>Total</span>
+          <span>Subtotal</span>
           <strong>₱{cartTotal.toLocaleString()}</strong>
         </div>
-        <button type="button" class="checkout-btn" disabled={ordering} onclick={submitOrder}>
-          {ordering ? 'Placing…' : 'Place order'}
+        <button type="button" class="checkout-btn" onclick={goCheckout}>
+          Checkout
         </button>
       </footer>
     {/if}
@@ -972,6 +934,13 @@
     box-sizing: border-box;
     background: var(--bg-card);
     color: var(--text-dark);
+  }
+
+  .checkout-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.5;
   }
 
   .checkout-bar {

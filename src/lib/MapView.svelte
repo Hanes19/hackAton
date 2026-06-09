@@ -152,11 +152,18 @@
     }
   })
 
+  export function zoomIn() {
+    map?.zoomIn()
+  }
+
+  export function zoomOut() {
+    map?.zoomOut()
+  }
+
   onMount(async () => {
     L = await import('leaflet')
     await import('leaflet/dist/leaflet.css')
     map = L.map(mapEl, { zoomControl: false }).setView([8.0167, 125.0333], 9)
-    L.control.zoom({ position: 'bottomright' }).addTo(map)
     L.tileLayer(MAP_TILE_URL, { attribution: MAP_TILE_ATTRIBUTION, maxZoom: 19 }).addTo(map)
     addMarkers()
   })

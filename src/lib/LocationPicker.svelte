@@ -184,13 +184,13 @@
   .picker-header strong {
     display: block;
     font-size: 13px;
-    color: #e8f4fc;
+    color: var(--text-dark);
     margin-bottom: 2px;
   }
 
   .picker-header span {
     font-size: 12px;
-    color: #4d7a9e;
+    color: var(--text-muted);
   }
 
   .picker-actions {
@@ -202,9 +202,9 @@
   .tool-btn {
     padding: 6px 10px;
     border-radius: 6px;
-    border: 1px solid #143e88;
-    background: var(--surface-deepest);
-    color: #84b9d5;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-inset);
+    color: var(--text-dark);
     font-size: 11px;
     font-weight: 600;
     cursor: pointer;
@@ -212,14 +212,14 @@
   }
 
   .tool-btn:hover:not(:disabled) {
-    border-color: var(--primary);
-    color: var(--primary);
+    border-color: var(--budol-orange);
+    color: var(--budol-orange);
   }
 
   .tool-btn.accent {
-    background: rgba(73, 182, 234, 0.12);
-    border-color: rgba(73, 182, 234, 0.35);
-    color: var(--primary);
+    background: var(--primary-light);
+    border-color: rgba(255, 87, 34, 0.35);
+    color: var(--budol-orange);
   }
 
   .tool-btn:disabled {
@@ -230,9 +230,9 @@
   .map-wrap {
     position: relative;
     height: 260px;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     overflow: hidden;
-    border: 1px solid #143e88;
+    border: 1px solid var(--border-strong);
   }
 
   .map-el {
@@ -247,14 +247,15 @@
     bottom: 12px;
     transform: translateX(-50%);
     z-index: 500;
-    background: rgba(7, 15, 31, 0.92);
-    border: 1px solid rgba(73, 182, 234, 0.35);
-    color: #84b9d5;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid var(--border-strong);
+    color: var(--text-dark);
     font-size: 11px;
     padding: 6px 12px;
     border-radius: 20px;
     pointer-events: none;
     white-space: nowrap;
+    box-shadow: var(--shadow-sm);
   }
 
   .coords-row {
@@ -271,19 +272,19 @@
 
   .coord label {
     font-size: 11px;
-    font-weight: 500;
-    color: #6eb3da;
+    font-weight: 600;
+    color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.04em;
   }
 
   .coord input {
     width: 100%;
     padding: 8px 10px;
-    background: var(--surface-deepest);
-    border: 1px solid #143e88;
-    border-radius: 8px;
-    color: #e8f4fc;
+    background: var(--bg-inset);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    color: var(--text-dark);
     font-size: 13px;
     outline: none;
     box-sizing: border-box;
@@ -291,23 +292,24 @@
   }
 
   .coord input:focus {
-    border-color: var(--primary);
+    border-color: var(--budol-orange);
+    box-shadow: 0 0 0 3px var(--primary-light);
   }
 
   .pinned-note {
     margin: 0;
     font-size: 12px;
-    color: #34d399;
+    color: var(--success);
   }
 
   .locate-error {
     margin: 0;
     font-size: 12px;
-    color: #f87171;
+    color: var(--alert-red);
   }
 
   :global(.leaflet-container) {
-    background: var(--surface-deepest);
+    background: var(--bg-inset);
     font-family: inherit;
   }
 </style>
