@@ -3,6 +3,7 @@
   import { page } from '$app/stores'
   import { register } from '$lib/auth'
   import { safeRedirect, loginUrl } from '$lib/navigation'
+  import NavBar from '$lib/NavBar.svelte'
 
   let name = $state('')
   let email = $state('')
@@ -25,6 +26,8 @@
 </script>
 
 <div class="page">
+  <NavBar variant="light" />
+  <div class="page-body">
   <div class="card">
 
     <!-- Brand -->
@@ -116,20 +119,29 @@
       Already have an account? <a href={loginUrl(nextUrl)}>Sign in</a>
     </p>
   </div>
+  </div>
 </div>
 
 <style>
   .page {
     min-height: 100vh;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
     background: #070f1f;
     background-image:
       radial-gradient(ellipse 60% 50% at 50% 0%, rgba(13, 88, 176, 0.18) 0%, transparent 70%),
       radial-gradient(ellipse 40% 30% at 80% 80%, rgba(73, 182, 234, 0.07) 0%, transparent 60%);
-    padding: 1.5rem;
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  }
+
+  .page-body {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .card {

@@ -2,7 +2,8 @@
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
   import { loginUrl } from '$lib/navigation'
-  import { getUser, logout } from '$lib/auth'
+  import { getUser } from '$lib/auth'
+  import NavBar from '$lib/NavBar.svelte'
   import LocationPicker from '$lib/LocationPicker.svelte'
   import {
     fetchMyShop,
@@ -151,13 +152,11 @@
     }
   }
 
-  async function handleLogout() {
-    await logout()
-    goto('/')
-  }
 </script>
 
-<div class="dashboard">
+<div class="dashboard-page">
+  <NavBar variant="dark" />
+  <div class="dashboard">
   <aside class="sidebar">
     <div class="brand">
       <span class="brand-icon">🏪</span>
@@ -182,11 +181,9 @@
     </nav>
 
     <div class="sidebar-footer">
-      <a href="/map" class="link-btn">← Browse Map</a>
       {#if shop?.verification_status === 'approved' || !shop?.verification_status}
         <a href="/shops/{shop?.id}" class="link-btn">View Public Shop</a>
       {/if}
-      <button class="link-btn danger" onclick={handleLogout}>Logout</button>
     </div>
   </aside>
 
@@ -409,12 +406,21 @@
       {/if}
     {/if}
   </main>
+  </div>
 </div>
 
 <style>
+  .dashboard-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: #070f1f;
+  }
+
   .dashboard {
     display: flex;
-    min-height: 100vh;
+    flex: 1;
+    min-height: 0;
     background: #070f1f;
     color: #e8f4fc;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;

@@ -1,21 +1,11 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
+  import NavBar from '$lib/NavBar.svelte'
 </script>
 
 <div style="min-height: 100vh; font-family: 'Segoe UI', sans-serif; background: #fff;">
 
-  <header style="position: sticky; top: 0; z-index: 100; background: white; border-bottom: 1px solid #eee; padding: 0.75rem 2rem; display: flex; justify-content: space-between; align-items: center;">
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <img src="/logo.png" alt="Budol Map" style="height: 40px; width: 40px; object-fit: contain;" />
-      <span style="font-size: 1.2rem; font-weight: 700; color: #1a1a1a;">Budol <span style="color: #e84c3d;">Maps</span></span>
-    </div>
-    <nav style="display: flex; gap: 2rem; align-items: center;">
-      <a href="/" style="font-size: 13px; color: #e84c3d; font-weight: 500; text-decoration: none;">Home</a>
-      <a href="/map" style="font-size: 13px; color: #555; text-decoration: none;">Local Shops</a>
-      <a href="/login" style="font-size: 13px; color: #555; text-decoration: none;">Login</a>
-      <a href="/register-user" style="font-size: 13px; background: #e84c3d; color: white; padding: 7px 18px; border-radius: 6px; text-decoration: none; font-weight: 500;">Get Started</a>
-    </nav>
-  </header>
+  <NavBar variant="light" />
 
   <div style="position: relative; min-height: 85vh; display: flex; align-items: center; overflow: hidden; background: url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1400&q=80') center/cover no-repeat;">
 

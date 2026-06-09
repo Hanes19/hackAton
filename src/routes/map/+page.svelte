@@ -1,9 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
-  import { goto } from '$app/navigation'
   import MapView from '$lib/MapView.svelte'
-  import { getUser, logout } from '$lib/auth'
-  import type { User } from '@supabase/supabase-js'
+  import NavBar from '$lib/NavBar.svelte'
   import type { GeoJsonObject } from 'geojson'
 
   interface Shop { id: string; name: string; category: string; lat: number; lng: number; address: string; description: string }
@@ -19,8 +17,6 @@
   let shops = $state<Shop[]>([])
   let search = $state('')
   let selectedCategory = $state('All')
-  let user = $state<User | null>(null)
-  
   let focusedShopId = $state<string | null>(null)
   let userLocation = $state<{ lat: number; lng: number } | null>(null)
   let travelMode = $state<'walking' | 'motorcycle' | 'car'>('motorcycle')
@@ -72,12 +68,7 @@
   });
 
   onMount(async () => {
-    const [shopsRes, currentUser] = await Promise.all([
-      fetch('/api/shops').then(r => r.json()),
-      getUser()
-    ])
-    shops = shopsRes
-    user = currentUser
+    shops = await fetch('/api/shops').then((r) => r.json())
   })
 
   function handleTouchStart(e: TouchEvent | MouseEvent) {
@@ -155,27 +146,14 @@
     if (watchId !== null) navigator.geolocation.clearWatch(watchId)
   })
 
-  async function handleLogout() {
-    await logout()
-    user = null
-    goto('/')
-  }
 </script>
 
 <div class="layout">
-  <header class="navbar">
-    <div class="brand"><span class="brand-name" style="font-size: 1.2rem; font-weight: bold; color: white;">📍 Budol Map</span></div>
-    <div class="search-wrap"><input bind:value={search} placeholder="Search products, shops, or locations..." class="search-input" /></div>
-    <nav class="nav-actions">
-      {#if user}
-        <a href="/admin" class="btn-outline">Admin Panel</a>
-        <button onclick={handleLogout} class="btn-outline" style="cursor: pointer;">Logout</button>
-      {:else}
-        <a href="/login" class="btn-outline">Login</a>
-        <a href="/register" class="btn-primary">Register Shop</a>
-      {/if}
-    </nav>
-  </header>
+  <NavBar variant="dark">
+    {#snippet center()}
+      <input bind:value={search} placeholder="Search products, shops, or locations..." class="search-input" />
+    {/snippet}
+  </NavBar>
 
   <div class="explorer-content">
     <aside class="feed-sidebar" class:nav-hidden={isNavigating}>
@@ -299,14 +277,8 @@
   :global(body) { margin: 0; padding: 0; background: #070f1f; font-family: -apple-system, sans-serif; overflow: hidden; }
   .layout { height: 100vh; display: flex; flex-direction: column; background: #070f1f; color: #e8f4fc; }
 
-  /* Navbar */
-  .navbar { display: flex; align-items: center; justify-content: space-between; padding: 0 1.25rem; height: 60px; background: #0c1a35; border-bottom: 1px solid rgba(73, 182, 234, 0.15); z-index: 100; }
-  .search-wrap { flex: 1; max-width: 400px; margin: 0 2rem; }
-  .search-input { width: 100%; padding: 8px 16px; background: #091525; border: 1px solid #143e88; border-radius: 8px; color: #fff; outline: none; }
+  .search-input { width: 100%; padding: 8px 16px; background: #091525; border: 1px solid #143e88; border-radius: 8px; color: #fff; outline: none; box-sizing: border-box; }
   .search-input:focus { border-color: #49b6ea; }
-  .nav-actions { display: flex; gap: 10px; }
-  .btn-primary { background: #3b82f6; color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px; border: none; cursor: pointer; transition: background 0.2s; }
-  .btn-outline { background: transparent; border: 1px solid rgba(73, 182, 234, 0.3); color: #84b9d5; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; cursor: pointer; }
 
   /* Content Shell Structure */
   .explorer-content { display: flex; flex: 1; overflow: hidden; }

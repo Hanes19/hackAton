@@ -14,7 +14,7 @@ const PUBLIC_SHOP_FIELDS =
 
 // get seller's shop by user id
 router.get('/user/:userId', async (req, res) => {
-  const { data, error } = await getSupabase()
+  const { data: userShop, error: fetchError } = await getSupabase()
     .from('shops')
     .select('*, products(*)')
     .eq('user_id', req.params.userId)
@@ -22,9 +22,9 @@ router.get('/user/:userId', async (req, res) => {
     .limit(1)
     .maybeSingle()
 
-  if (error) return res.status(500).json({ error: error.message })
-  if (!data) return res.status(404).json({ error: 'No shop found for this user.' })
-  res.json(data)
+  if (fetchError) return res.status(500).json({ error: fetchError.message })
+  if (!userShop) return res.status(404).json({ error: 'No shop found for this user.' })
+  res.json(userShop)
 })
 
 // get all shops (public: approved only; ?all=true for admin)
@@ -36,20 +36,21 @@ router.get('/', async (req, res) => {
     query = query.or('verification_status.eq.approved,verification_status.is.null')
   }
 
-  const { data, error } = await query.order('created_at', { ascending: false })
-  if (error) return res.status(500).json({ error: error.message })
-  res.json(data)
+  const { data: shops, error: fetchError } = await query.order('created_at', { ascending: false })
+  if (fetchError) return res.status(500).json({ error: fetchError.message })
+  res.json(shops)
 })
 
 // get one shop with its products
 router.get('/:id', async (req, res) => {
-  const { data, error } = await getSupabase()
+  const { data: shop, error: fetchError } = await getSupabase()
     .from('shops')
     .select('*, products(*)')
     .eq('id', req.params.id)
     .single()
-  if (error) return res.status(500).json({ error: error.message })
-  res.json(data)
+    
+  if (fetchError) return res.status(500).json({ error: fetchError.message })
+  res.json(shop)
 })
 
 // register a new shop (seller application with LGU + ID verification)
@@ -114,9 +115,9 @@ router.post('/', async (req, res) => {
     lgu_verified_at: new Date().toISOString()
   }
 
-  const { data, error } = await getSupabase().from('shops').insert([payload]).select()
-  if (error) return res.status(500).json({ error: error.message })
-  res.json(data[0])
+  const { data: newShop, error: insertError } = await getSupabase().from('shops').insert([payload]).select()
+  if (insertError) return res.status(500).json({ error: insertError.message })
+  res.json(newShop[0])
 })
 
 // seller: update shop profile / setup
@@ -145,15 +146,15 @@ router.patch('/:id', async (req, res) => {
     return res.status(400).json({ error: 'No valid fields to update.' })
   }
 
-  const { data, error } = await getSupabase()
+  const { data: updatedShop, error: updateError } = await getSupabase()
     .from('shops')
     .update(update)
     .eq('id', req.params.id)
     .select('*, products(*)')
     .single()
 
-  if (error) return res.status(500).json({ error: error.message })
-  res.json(data)
+  if (updateError) return res.status(500).json({ error: updateError.message })
+  res.json(updatedShop)
 })
 
 // admin: approve or reject seller application
@@ -171,15 +172,15 @@ router.patch('/:id/verification', async (req, res) => {
     update.rejection_reason = rejection_reason
   }
 
-  const { data, error } = await getSupabase()
+  const { data: verifiedShop, error: verifyError } = await getSupabase()
     .from('shops')
     .update(update)
     .eq('id', req.params.id)
     .select()
     .single()
 
-  if (error) return res.status(500).json({ error: error.message })
-  res.json(data)
+  if (verifyError) return res.status(500).json({ error: verifyError.message })
+  res.json(verifiedShop)
 })
 
 export default router

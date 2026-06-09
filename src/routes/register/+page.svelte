@@ -12,6 +12,7 @@
   import type { User } from '@supabase/supabase-js'
   import LocationPicker from '$lib/LocationPicker.svelte'
   import { loginUrl, registerUserUrl } from '$lib/navigation'
+  import NavBar from '$lib/NavBar.svelte'
 
   const lguCenters: Record<string, { lat: number; lng: number }> = {
     'Valencia City': { lat: 7.9064, lng: 125.0948 },
@@ -32,6 +33,7 @@
 
   let ownerName = $state('')
   let shopName = $state('')
+  let businessType = $state('Product') // <-- ADDED: Default business type
   let category = $state('Food')
   let description = $state('')
   let address = $state('')
@@ -66,6 +68,7 @@
 
   onMount(async () => {
     user = await getUser()
+  
     if (user?.user_metadata?.name && !ownerName) {
       ownerName = String(user.user_metadata.name)
     }
@@ -78,7 +81,7 @@
 
   function canAdvance(): boolean {
     if (step === 0) {
-      return !!(ownerName.trim() && shopName.trim() && address.trim() && lguMunicipality && locationPinned)
+      return !!(ownerName.trim() && shopName.trim() && businessType && address.trim() && lguMunicipality && locationPinned)
     }
     if (step === 1) {
       return permitResult?.verified === true
@@ -173,6 +176,7 @@
       body: JSON.stringify({
         name: shopName,
         description,
+        business_type: businessType, // <-- ADDED: Sending business type to backend
         category,
         address,
         lat,
@@ -202,6 +206,7 @@
 </script>
 
 <div class="page">
+  <NavBar variant="dark" />
   <div class="shell">
     <a href="/map" class="back-link" onclick={() => goto('/map')}>← Back to map</a>
 
@@ -239,7 +244,7 @@
       </div>
     {:else}
       <div class="stepper">
-        {#each steps as label, i}
+        {#each steps as label, i (label)}
           <div class="step-item" class:active={i === step} class:done={i < step}>
             <span class="step-num">{i < step ? '✓' : i + 1}</span>
             <span class="step-label">{label}</span>
@@ -267,17 +272,25 @@
 
             <div class="field-row">
               <div class="field">
-                <label for="category">Category</label>
-                <select id="category" bind:value={category}>
-                  {#each categories as cat}<option>{cat}</option>{/each}
+                <label for="business-type">Business Type <span class="req">*</span></label>
+                <select id="business-type" bind:value={businessType}>
+                  <option value="Product">Product-based (Retail, Food, etc.)</option>
+                  <option value="Service">Service-based (Repair, Salon, etc.)</option>
                 </select>
               </div>
               <div class="field">
-                <label for="lgu">LGU municipality <span class="req">*</span></label>
-                <select id="lgu" bind:value={lguMunicipality}>
-                  {#each lgus as lgu}<option value={lgu.name}>{lgu.name}</option>{/each}
+                <label for="category">Category</label>
+                <select id="category" bind:value={category}>
+                  {#each categories as cat (cat)}<option>{cat}</option>{/each}
                 </select>
               </div>
+            </div>
+
+            <div class="field">
+              <label for="lgu">LGU municipality <span class="req">*</span></label>
+              <select id="lgu" bind:value={lguMunicipality}>
+                {#each lgus as lgu (lgu.name)}<option value={lgu.name}>{lgu.name}</option>{/each}
+              </select>
             </div>
 
             <div class="field">
@@ -364,7 +377,7 @@
             <details class="demo-box">
               <summary>Demo permit numbers (for testing)</summary>
               <ul>
-                {#each demoPermits as demo}
+                {#each demoPermits as demo (demo.permit)}
                   <li>
                     <button type="button" class="demo-btn" onclick={() => fillDemo(demo)}>
                       {demo.permit} — {demo.owner} ({demo.lgu})
@@ -386,7 +399,7 @@
               <div class="field">
                 <label for="id-type">ID type <span class="req">*</span></label>
                 <select id="id-type" bind:value={idType}>
-                  {#each ID_TYPES as type}<option>{type}</option>{/each}
+                  {#each ID_TYPES as type (type)}<option>{type}</option>{/each}
                 </select>
               </div>
               <div class="field">
@@ -429,7 +442,7 @@
               <dl>
                 <dt>Owner</dt><dd>{ownerName}</dd>
                 <dt>Shop</dt><dd>{shopName}</dd>
-                <dt>Category</dt><dd>{category}</dd>
+                <dt>Type</dt><dd>{businessType}</dd> <dt>Category</dt><dd>{category}</dd>
                 <dt>Address</dt><dd>{address}</dd>
                 <dt>Map pin</dt><dd>{lat.toFixed(4)}, {lng.toFixed(4)}</dd>
                 <dt>LGU</dt><dd>{lguMunicipality}</dd>
@@ -520,7 +533,7 @@
   .brand p { margin: 4px 0 0; font-size: 13px; color: #4d7a9e; }
   .auth-hint { font-size: 13px; color: #3a6080; margin-top: 0.75rem; }
   .auth-hint.signed-in { color: #34d399; margin-bottom: 0.5rem; }
-  .auth-hint a { color: #49b6ea; text-decoration: none; }
+
 
   .auth-banner {
     background: rgba(245, 158, 11, 0.08);

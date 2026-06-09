@@ -3,6 +3,7 @@
   import { supabase } from '$lib/supabase'
   import { getUser } from '$lib/auth'
   import { goto } from '$app/navigation'
+  import NavBar from '$lib/NavBar.svelte'
   
   type Tab = 'overview' | 'sellers' | 'ads' | 'users' | 'flags' | 'logs' | 'settings'
   type SettingsTab = 'catalog' | 'logistics' | 'operations'
@@ -164,8 +165,9 @@
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 </script>
 
-<div class="admin-dashboard-container">
-  
+<div class="admin-page">
+  <NavBar variant="dark" />
+  <div class="admin-dashboard-container">
   <aside class="sidebar">
     <div class="brand-header">
       <div class="brand-avatar">{adminName[0]}</div>
@@ -534,11 +536,13 @@
     </div>
   {/if}
 
+  </div>
 </div>
 
 <style>
   :global(body) { background-color: #0f0f0f; color: #f8fafc; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; margin: 0; }
-  .admin-dashboard-container { display: flex; height: 100vh; overflow: hidden; position: relative; }
+  .admin-page { display: flex; flex-direction: column; min-height: 100vh; }
+  .admin-dashboard-container { display: flex; flex: 1; min-height: 0; overflow: hidden; position: relative; }
 
   /* Sidebar */
   .sidebar { width: 240px; background-color: #141414; border-right: 1px solid #222222; display: flex; flex-direction: column; padding: 1.5rem 1rem; flex-shrink: 0; }
