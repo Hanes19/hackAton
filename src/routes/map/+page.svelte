@@ -172,7 +172,7 @@
         <button onclick={handleLogout} class="btn-outline" style="cursor: pointer;">Logout</button>
       {:else}
         <a href="/login" class="btn-outline">Login</a>
-        <a href="/register-user" class="btn-primary">Register</a>
+        <a href="/register" class="btn-primary">Register Shop</a>
       {/if}
     </nav>
   </header>

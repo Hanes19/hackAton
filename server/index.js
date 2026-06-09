@@ -5,6 +5,7 @@ import express from 'express'
 import cors from 'cors'
 import shopsRouter from './routes/shops.js'
 import assistantRouter from './routes/assistant.js'
+import lguRouter from './routes/lgu.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 dotenv.config({ path: join(__dirname, '.env') })
@@ -20,6 +21,7 @@ app.use(cors())
 app.use(express.json())
 
 app.use('/api/shops', shopsRouter)
+app.use('/api/lgu', lguRouter)
 app.use('/api/assistant', assistantRouter)
 
 app.listen(3001, () => console.log('API running on http://localhost:3001'))

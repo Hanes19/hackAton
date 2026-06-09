@@ -39,7 +39,7 @@
         <button onclick={() => goto('/map')} style="background: #e84c3d; color: white; border: none; padding: 13px 28px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;">
           Discover Local Finds →
         </button>
-        <button onclick={() => goto('/register-user')} style="background: transparent; color: white; border: 1px solid rgba(255,255,255,0.3); padding: 13px 28px; border-radius: 8px; font-size: 15px; cursor: pointer;">
+        <button onclick={() => goto('/register')} style="background: transparent; color: white; border: 1px solid rgba(255,255,255,0.3); padding: 13px 28px; border-radius: 8px; font-size: 15px; cursor: pointer;">
           Register as Seller
         </button>
       </div>
@@ -108,7 +108,7 @@
   <div style="background: #e84c3d; padding: 4rem 2rem; text-align: center;">
     <h2 style="font-size: 1.8rem; font-weight: 800; color: white; margin-bottom: 0.75rem;">Ready to sell on Budol Map?</h2>
     <p style="color: rgba(255,255,255,0.8); margin-bottom: 2rem; font-size: 15px;">Join hundreds of local sellers and reach more buyers in Bukidnon.</p>
-    <button onclick={() => goto('/register-user')} style="background: white; color: #e84c3d; border: none; padding: 13px 32px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer;">
+    <button onclick={() => goto('/register')} style="background: white; color: #e84c3d; border: none; padding: 13px 32px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer;">
       Register Your Shop Free →
     </button>
   </div>

@@ -4,11 +4,23 @@
   import { getUser } from '$lib/auth'
   import { goto } from '$app/navigation'
   
-  type Tab = 'overview' | 'ads' | 'users' | 'flags' | 'logs' | 'settings'
+  type Tab = 'overview' | 'sellers' | 'ads' | 'users' | 'flags' | 'logs' | 'settings'
   type SettingsTab = 'catalog' | 'logistics' | 'operations'
   type AdsTab = 'campaigns' | 'offers' | 'create'
 
-  interface Shop { id: string; name: string; category: string; address: string; created_at: string }
+  interface Shop {
+    id: string
+    name: string
+    category: string
+    address: string
+    created_at: string
+    owner_name?: string
+    permit_number?: string
+    lgu_municipality?: string
+    permit_verified?: boolean
+    id_type?: string
+    verification_status?: string | null
+  }
   interface Profile { id: string; name: string; email: string; is_admin: boolean; created_at: string; city_municipality?: string; permissions?: string[] }
 
   let activeTab = $state<Tab>('overview')
@@ -133,6 +145,22 @@
     sellerOffers = sellerOffers.map(o => o.id === id ? { ...o, status } : o)
   }
 
+  let pendingSellers = $derived(shops.filter(s => s.verification_status === 'pending'))
+  let reviewingId = $state<string | null>(null)
+
+  async function updateSellerStatus(shopId: string, status: 'approved' | 'rejected') {
+    reviewingId = shopId
+    const res = await fetch(`/api/shops/${shopId}/verification`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    })
+    reviewingId = null
+    if (res.ok) {
+      shops = shops.map(s => s.id === shopId ? { ...s, verification_status: status } : s)
+    }
+  }
+
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 </script>
 
@@ -149,6 +177,9 @@
 
     <nav class="nav-menu">
       <button class="nav-item" class:active={activeTab === 'overview'} onclick={() => activeTab = 'overview'}><span class="icon">⊞</span> Overview</button>
+      <button class="nav-item" class:active={activeTab === 'sellers'} onclick={() => activeTab = 'sellers'}><span class="icon">🏪</span> Seller Verification
+        {#if pendingSellers.length > 0}<span class="nav-badge-alert">{pendingSellers.length}</span>{/if}
+      </button>
       <button class="nav-item" class:active={activeTab === 'ads'} onclick={() => activeTab = 'ads'}><span class="icon">◈</span> Ads & Promotions</button>
       <button class="nav-item" class:active={activeTab === 'users'} onclick={() => activeTab = 'users'}><span class="icon">👤</span> User Management</button>
       <button class="nav-item" class:active={activeTab === 'flags'} onclick={() => activeTab = 'flags'}><span class="icon">⚑</span> Reports & Flags
@@ -214,6 +245,84 @@
           </div>
         </div>
       </section>
+
+    {:else if activeTab === 'sellers'}
+      <div class="tab-header">
+        <h2>Seller Verification</h2>
+        <p class="text-dim">Review LGU-verified seller applications with business permit and valid ID</p>
+      </div>
+
+      <section class="kpi-grid" style="margin-bottom: 1.5rem;">
+        <div class="kpi-card text-amber">
+          <div class="kpi-meta"><span class="kpi-label">Pending Review</span><span class="kpi-icon">⏳</span></div>
+          <h2 class="kpi-value">{pendingSellers.length}</h2>
+          <span class="kpi-trend static">awaiting approval</span>
+        </div>
+        <div class="kpi-card text-emerald">
+          <div class="kpi-meta"><span class="kpi-label">Approved Sellers</span><span class="kpi-icon">✓</span></div>
+          <h2 class="kpi-value">{shops.filter(s => s.verification_status === 'approved' || !s.verification_status).length}</h2>
+          <span class="kpi-trend static">on the map</span>
+        </div>
+        <div class="kpi-card text-rose">
+          <div class="kpi-meta"><span class="kpi-label">Rejected</span><span class="kpi-icon">✕</span></div>
+          <h2 class="kpi-value">{shops.filter(s => s.verification_status === 'rejected').length}</h2>
+          <span class="kpi-trend static">not listed</span>
+        </div>
+      </section>
+
+      <div class="panel-card">
+        <div class="panel-header flex-header">
+          <h3>Applications Queue</h3>
+          <a href="/register" class="btn-text" style="font-size: 12px; color: #49b6ea;">+ New registration form</a>
+        </div>
+        <div class="table-container">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Shop / Owner</th>
+                <th>LGU Permit</th>
+                <th>Valid ID</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each shops.filter(s => s.verification_status === 'pending' || s.verification_status === 'rejected') as shop (shop.id)}
+                <tr>
+                  <td>
+                    <div class="font-medium">{shop.name}</div>
+                    <div class="text-dim" style="font-size: 11px;">{shop.owner_name || '—'} · {shop.category}</div>
+                    <div class="text-dim" style="font-size: 11px;">{shop.address}</div>
+                  </td>
+                  <td>
+                    <div class="font-medium" style="font-size: 12px;">{shop.permit_number || '—'}</div>
+                    <div class="text-dim" style="font-size: 11px;">{shop.lgu_municipality || '—'}</div>
+                    {#if shop.permit_verified}<span class="badge badge-success" style="font-size: 10px; margin-top: 4px;">LGU Verified</span>{/if}
+                  </td>
+                  <td class="text-dim" style="font-size: 12px;">{shop.id_type || '—'}</td>
+                  <td>
+                    <span class="badge {shop.verification_status === 'pending' ? 'badge-warning' : shop.verification_status === 'approved' ? 'badge-success' : 'badge-danger'}">
+                      {(shop.verification_status || 'legacy').toUpperCase()}
+                    </span>
+                  </td>
+                  <td>
+                    {#if shop.verification_status === 'pending'}
+                      <div style="display: flex; gap: 8px;">
+                        <button class="action-btn" style="background: #064e3b; color: #34d399; border-color: #065f46;" disabled={reviewingId === shop.id} onclick={() => updateSellerStatus(shop.id, 'approved')}>Approve</button>
+                        <button class="action-btn" style="background: #450a0a; color: #f87171; border-color: #7f1d1d;" disabled={reviewingId === shop.id} onclick={() => updateSellerStatus(shop.id, 'rejected')}>Reject</button>
+                      </div>
+                    {:else}
+                      <span class="text-dim">—</span>
+                    {/if}
+                  </td>
+                </tr>
+              {:else}
+                <tr><td colspan="5" class="text-dim" style="text-align: center; padding: 2rem;">No pending seller applications</td></tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
     {:else if activeTab === 'ads'}
       <div class="tab-header" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1rem;">
@@ -473,6 +582,7 @@
   .kpi-value { font-size: 1.75rem; font-weight: 700; margin: 0.25rem 0; color: #fff; }
   .kpi-trend { font-size: 0.75rem; font-weight: 500; }
   .text-blue .kpi-value { color: #60a5fa; }
+  .text-amber .kpi-value { color: #fbbf24; }
   .text-emerald .kpi-value { color: #34d399; }
   .text-rose .kpi-value { color: #f87171; }
   .text-purple .kpi-value { color: #c084fc; }

@@ -16,16 +16,19 @@ App pages:
 - /map — Interactive map to browse local shops
 - /shops/{id} — View a specific shop and its products
 - /login — Sign in
-- /register-user — Create a new account
-- /dashboard — Seller dashboard (create shop, manage products) — requires login
+- /register-user — Create a buyer account
+- /register — Seller registration with LGU business permit verification and valid ID
+- /dashboard — Seller dashboard (manage products) — requires login
 - /admin — Admin panel — admins only
 
 How to become a seller:
-1. Sign up at /register-user
-2. Log in at /login
-3. Open /dashboard
-4. Enter shop name, category, description, address, and pin location on the map
-5. Add products with name, price, and description
+1. (Optional) Create an account at /register-user and sign in at /login
+2. Go to /register for seller registration
+3. Enter business info, owner name, and LGU municipality
+4. Verify your Mayor's/Business Permit number with integrated LGU verification
+5. Upload a valid government ID (PhilID, driver's license, passport, UMID, etc.)
+6. Submit for admin review — shop appears on the map once approved
+7. Add products from /dashboard
 
 When product/shop matches appear in the context, mention them by name and price if available. Tell the user they can tap the button below to visit the shop.
 

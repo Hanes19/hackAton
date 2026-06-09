@@ -16,14 +16,14 @@
         "Hi! I'm Budol Assistant. I can help you find products, navigate the app, or guide you through setting up your shop. What can I help with?",
       actions: [
         { type: 'navigate', url: '/map', label: 'Browse Shops' },
-        { type: 'navigate', url: '/dashboard', label: 'Set Up a Shop' }
+        { type: 'navigate', url: '/register', label: 'Register as Seller' }
       ]
     }
   ])
 
   const quickPrompts = [
     'Find food near me',
-    'How do I become a seller?',
+    'How do I register my shop?',
     'Take me to the map',
     'Help me add a product'
   ]
