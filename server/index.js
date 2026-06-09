@@ -1,7 +1,14 @@
-import 'dotenv/config'
+import dotenv from 'dotenv'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
 import express from 'express'
 import cors from 'cors'
 import shopsRouter from './routes/shops.js'
+import assistantRouter from './routes/assistant.js'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+dotenv.config({ path: join(__dirname, '.env') })
+dotenv.config({ path: join(__dirname, '..', '.env') })
 
 // FIXED: Look for the PUBLIC_ prefixed variables from your root .env file
 console.log('URL:', process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL)
@@ -13,5 +20,6 @@ app.use(cors())
 app.use(express.json())
 
 app.use('/api/shops', shopsRouter)
+app.use('/api/assistant', assistantRouter)
 
 app.listen(3001, () => console.log('API running on http://localhost:3001'))
