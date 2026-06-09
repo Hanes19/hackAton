@@ -185,44 +185,59 @@
       </button>
 
       {#if selectedShop}
-        <div class="routing-overlay-panel">
-          <h4>Transit to {selectedShop.name}</h4>
-          
-          {#if userLocation}
-            <div class="routing-metrics">
-              <div class="metric">
-                <span class="lbl">Distance</span>
-                <span class="val">{routeDistance !== null && !isNaN(routeDistance) ? `${routeDistance.toFixed(2)} km` : '...'}</span>
-              </div>
-              <div class="metric">
-                <span class="lbl">ETA</span>
-                <span class="val" style="color: #49b6ea;">
-                  {#if isRouting} ... {:else if routeEta !== null && !isNaN(routeEta)} {routeEta} mins {:else} -- {/if}
-                </span>
-              </div>
-            </div>
+  <div class="shop-details-panel">
+    <div class="drag-handle"></div>
 
-            <div class="ride-selector">
-              <button class="ride-btn" class:active={travelMode === 'car'} onclick={() => travelMode = 'car'}>🚗 Car</button>
-              <button class="ride-btn" class:active={travelMode === 'motorcycle'} onclick={() => travelMode = 'motorcycle'}>🏍️ Moto</button>
-              <button class="ride-btn" class:active={travelMode === 'walking'} onclick={() => travelMode = 'walking'}>🚶 Walk</button>
-            </div>
+    <div class="panel-header">
+      <h2 class="shop-title">{selectedShop.name}</h2>
+      <p class="shop-subtitle">{selectedShop.category} • {selectedShop.address || 'Bukidnon'}</p>
+    </div>
 
-            <button 
-              class="btn-primary" 
-              style="width: 100%; margin-top: 12px; padding: 12px; font-size: 14px; text-align: center; justify-content: center; background: {isNavigating ? '#ef4444' : '#3b82f6'};" 
-              onclick={() => { isNavigating = !isNavigating; if (isNavigating) recenterTrigger++; }}
-            >
-              {isNavigating ? '⏹ Stop Navigation' : '▶ Start Navigation'}
-            </button>
-          {:else}
-            <div style="text-align: center; padding: 0.5rem 0;">
-              <p style="font-size: 12px; color: #84b9d5; margin: 0 0 10px 0;">Enable location tracking to start navigation.</p>
-              <button class="btn-primary" style="padding: 6px 12px; font-size: 11px;" onclick={handleGpsClick}>Enable GPS Tracking</button>
-            </div>
-          {/if}
+    <div class="image-gallery">
+      <div class="mock-img">🏪</div>
+      <div class="mock-img">📸</div>
+      <div class="mock-img">✨</div>
+      <div class="mock-img">📦</div>
+    </div>
+
+    {#if userLocation}
+      <div class="routing-metrics-row">
+        <div class="metric-primary">
+          <span class="eta">
+            {#if isRouting} ... {:else if routeEta !== null && !isNaN(routeEta)} {routeEta} min {:else} -- {/if}
+          </span>
+          <span class="distance">
+            {routeDistance !== null && !isNaN(routeDistance) ? `${routeDistance.toFixed(1)} km` : '...'}
+          </span>
         </div>
-      {/if}
+
+        <div class="ride-selector">
+          <button class="ride-btn" class:active={travelMode === 'car'} onclick={() => travelMode = 'car'}>🚗</button>
+          <button class="ride-btn" class:active={travelMode === 'motorcycle'} onclick={() => travelMode = 'motorcycle'}>🏍️</button>
+          <button class="ride-btn" class:active={travelMode === 'walking'} onclick={() => travelMode = 'walking'}>🚶</button>
+        </div>
+      </div>
+
+      <button 
+        class="action-btn" 
+        style="background: {isNavigating ? '#ef4444' : '#3b82f6'};" 
+        onclick={() => { isNavigating = !isNavigating; if (isNavigating) recenterTrigger++; }}
+      >
+        {isNavigating ? '⏹ Stop Navigation' : '▶ Start Navigation'}
+      </button>
+    {:else}
+      <div class="no-gps-state">
+        <p>Enable location tracking to see routes.</p>
+        <button class="btn-primary" onclick={handleGpsClick}>Enable GPS Tracking</button>
+      </div>
+    {/if}
+
+    <div class="shop-description-box">
+      <h4>About this location</h4>
+      <p>{selectedShop.description || 'A fantastic local spot offering the best products and services in the area.'}</p>
+    </div>
+  </div>
+{/if}
     </main>
   </div>
 </div>
@@ -272,12 +287,43 @@
   .gps-trigger-btn:hover { background: #143e88; }
   .gps-trigger-btn.active { background: #10b981; border-color: #34d399; color: white; }
 
-  .routing-overlay-panel { position: absolute; top: 16px; left: 16px; background: rgba(12, 26, 53, 0.9); backdrop-filter: blur(8px); border: 1px solid rgba(73, 182, 234, 0.3); border-radius: 10px; width: 280px; padding: 1rem; z-index: 1000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-  .routing-overlay-panel h4 { margin: 0 0 10px 0; font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .routing-metrics { display: flex; justify-content: space-between; background: #091525; padding: 10px; border-radius: 6px; margin-bottom: 12px; border: 1px solid rgba(20, 62, 136, 0.5); }
-  .metric { display: flex; flex-direction: column; gap: 2px; }
-  .metric .lbl { font-size: 10px; color: #6eb3da; text-transform: uppercase; letter-spacing: 0.03em; }
-  .metric .val { font-size: 14px; font-weight: 700; color: #fff; }
+  /* Expanded Shop Details Panel */
+  .shop-details-panel { 
+    position: absolute; bottom: 16px; left: 16px; width: calc(100% - 32px); max-width: 380px; 
+    background: rgba(12, 26, 53, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(73, 182, 234, 0.2); 
+    border-radius: 20px; padding: 1.25rem; z-index: 1000; box-shadow: 0 -10px 40px rgba(0,0,0,0.6); 
+    display: flex; flex-direction: column; gap: 14px; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
+  }
+  @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  .drag-handle { width: 40px; height: 5px; background: #2a4b7c; border-radius: 3px; margin: 0 auto 4px; }
+  
+  .panel-header .shop-title { margin: 0; font-size: 1.4rem; font-weight: 700; color: #fff; line-height: 1.2; }
+  .panel-header .shop-subtitle { margin: 4px 0 0; font-size: 0.85rem; color: #84b9d5; }
+
+  /* Horizontal Scrolling Image Gallery */
+  .image-gallery { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
+  .image-gallery::-webkit-scrollbar { display: none; }
+  .mock-img { width: 90px; height: 70px; flex-shrink: 0; background: #070f1f; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; border: 1px solid rgba(73, 182, 234, 0.15); box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+
+  /* Metrics Row (ETA & Ride Mode) */
+  .routing-metrics-row { display: flex; align-items: center; justify-content: space-between; background: #091525; padding: 8px 12px; border-radius: 12px; border: 1px solid rgba(20, 62, 136, 0.5); }
+  .metric-primary { display: flex; align-items: baseline; gap: 8px; }
+  .metric-primary .eta { font-size: 1.2rem; font-weight: 800; color: #49b6ea; }
+  .metric-primary .distance { font-size: 0.9rem; color: #84b9d5; font-weight: 500; }
+
+  /* Big Action Button */
+  .action-btn { width: 100%; padding: 14px; border-radius: 12px; color: white; font-weight: 700; font-size: 15px; border: none; cursor: pointer; transition: transform 0.1s, filter 0.2s; display: flex; justify-content: center; align-items: center; }
+  .action-btn:active { transform: scale(0.98); }
+  .action-btn:hover { filter: brightness(1.1); }
+
+  /* Description text area */
+  .shop-description-box { border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; }
+  .shop-description-box h4 { margin: 0 0 6px; font-size: 0.9rem; color: #fff; font-weight: 600; }
+  .shop-description-box p { margin: 0; font-size: 0.85rem; color: #a1c9e3; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+  .no-gps-state { text-align: center; padding: 1rem 0; }
+  .no-gps-state p { font-size: 13px; color: #84b9d5; margin: 0 0 12px 0; }
 
   .ride-selector { display: flex; gap: 4px; background: #070f1f; padding: 2px; border-radius: 6px; }
   .ride-btn { flex: 1; background: transparent; border: none; color: #84b9d5; padding: 6px; border-radius: 4px; font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
