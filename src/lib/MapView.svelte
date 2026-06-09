@@ -34,8 +34,8 @@
     Object.values(markers).forEach(m => m.remove())
     markers = {}
     shops.forEach((shop) => {
-      const m = L.marker([shop.lat, shop.lng])
-        .addTo(map)
+      const m = L!.marker([shop.lat, shop.lng])
+        .addTo(map!)
         .bindPopup(`
           <div style="text-align: center; font-family: sans-serif; color: #111;">
             <b style="font-size: 14px;">${shop.name}</b><br>

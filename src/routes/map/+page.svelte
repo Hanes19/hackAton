@@ -320,7 +320,7 @@
   /* Description text area */
   .shop-description-box { border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px; }
   .shop-description-box h4 { margin: 0 0 6px; font-size: 0.9rem; color: #fff; font-weight: 600; }
-  .shop-description-box p { margin: 0; font-size: 0.85rem; color: #a1c9e3; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .shop-description-box p { margin: 0; font-size: 0.85rem; color: #a1c9e3; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
   .no-gps-state { text-align: center; padding: 1rem 0; }
   .no-gps-state p { font-size: 13px; color: #84b9d5; margin: 0 0 12px 0; }
