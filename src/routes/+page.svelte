@@ -1,95 +1,55 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
-  import MapView from '$lib/MapView.svelte'
-  import { getUser, logout } from '$lib/auth'
-  import type { User } from '@supabase/supabase-js'
-  import { theme } from '$lib/theme'
-
-  interface Shop {
-    id: string
-    name: string
-    category: string
-    lat: number
-    lng: number
-    address: string
-    description: string
-  }
-
-  let shops = $state<Shop[]>([])
-  let search = $state('')
-  let selectedCategory = $state('All')
-  let user = $state<User | null>(null)
-
-  const categories = ['All', 'Food', 'Clothing', 'Electronics', 'Services', 'Health & Beauty', 'Other']
-
-  let filtered = $derived(
-    shops.filter(s => {
-      const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
-        s.category.toLowerCase().includes(search.toLowerCase())
-      const matchCategory = selectedCategory === 'All' || s.category === selectedCategory
-      return matchSearch && matchCategory
-    })
-  )
-
-  onMount(async () => {
-    const [shopsRes, currentUser] = await Promise.all([
-      fetch('/api/shops').then(r => r.json()),
-      getUser()
-    ])
-    shops = shopsRes
-    user = currentUser
-  })
-
-  async function handleLogout() {
-    await logout()
-    user = null
-    goto('/')
-  }
 </script>
 
-<div style="height: 100vh; display: flex; flex-direction: column;">
+<div style="min-height: 100vh; background: #0f0f0f; color: white; display: flex; flex-direction: column;">
 
-  <!-- Navbar -->
-  <header style="padding: 0.75rem 1.5rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-shrink: 0;">
-    <h1 style="font-size: 1.2rem; font-weight: 600; white-space: nowrap;">🗺 LocalMarket</h1>
-    <input bind:value={search} placeholder="Search shops or categories..." style="flex: 1; max-width: 400px;" />
-    <div style="display: flex; gap: 8px; align-items: center;">
-      <a href="/register" style="font-size: 13px; background: #1a1a1a; color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; white-space: nowrap;">+ Add shop</a>
-      {#if user}
-      <a href="/dashboard" style="font-size: 13px; color: #666; text-decoration: none;">My Shop</a>
-        <a href="/admin" style="font-size: 13px; color: #666; text-decoration: none;">Admin</a>
-        <span style="font-size: 13px; color: #666;">{user.user_metadata.name || user.email}</span>
-        <button onclick={() => theme.toggle()} style="margin-left: auto; font-size: 16px; background: none; border: 1px solid #ddd; border-radius: 6px; padding: 4px 8px; cursor: pointer; flex-shrink: 0;">🌙</button>
-        <button onclick={handleLogout} style="font-size: 13px; padding: 6px 14px;">Logout</button>
-      {:else}
-        <a href="/login" style="font-size: 13px; padding: 6px 14px; border: 1px solid #ddd; border-radius: 6px; text-decoration: none; color: #333;">Login</a>
-      {/if}
+  <!-- Nav -->
+  <header style="padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222;">
+    <span style="font-size: 1.1rem; font-weight: 700;">🗺 LocalMarket</span>
+    <div style="display: flex; gap: 12px;">
+      <a href="/login" style="font-size: 13px; color: #aaa; text-decoration: none; padding: 6px 14px;">Login</a>
+      <a href="/register-user" style="font-size: 13px; background: white; color: black; text-decoration: none; padding: 6px 14px; border-radius: 6px; font-weight: 500;">Get Started</a>
     </div>
-    
   </header>
 
-  <!-- Category Filter Bar -->
-
-<div style="padding: 8px 1.5rem; border-bottom: 1px solid #eee; display: flex; gap: 8px; overflow-x: auto; flex-shrink: 0; background: #fafafa; align-items: center;">
-  {#each categories as cat (cat)}
-    <button
-      onclick={() => selectedCategory = cat}
-      style="padding: 5px 14px; font-size: 12px; border-radius: 20px; white-space: nowrap; cursor: pointer; background: {selectedCategory === cat ? '#1a1a1a' : 'white'}; color: {selectedCategory === cat ? 'white' : '#555'}; border: 1px solid {selectedCategory === cat ? '#1a1a1a' : '#ddd'};">
-      {cat}
-      {#if cat !== 'All'}
-        <span style="opacity: 0.6;">({shops.filter(s => s.category === cat).length})</span>
-      {:else}
-        <span style="opacity: 0.6;">({shops.length})</span>
-      {/if}
-    </button>
-  {/each}
-  
-</div>
-
-  <!-- Map -->
-  <div style="flex: 1;">
-    <MapView shops={filtered} />
+  <!-- Hero -->
+  <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 4rem 2rem;">
+    <div style="font-size: 12px; letter-spacing: 0.15em; color: #3b82f6; margin-bottom: 1.5rem; text-transform: uppercase; font-weight: 600;">Bukidnon Province • Digital Marketplace</div>
+    <h1 style="font-size: clamp(2rem, 6vw, 4rem); font-weight: 800; line-height: 1.1; margin-bottom: 1.5rem; max-width: 700px;">
+      Discover Local Shops.<br/>
+      <span style="color: #3b82f6;">Support Local Trade.</span>
+    </h1>
+    <p style="font-size: 1rem; color: #888; max-width: 500px; line-height: 1.7; margin-bottom: 2.5rem;">
+      LocalMarket connects Bukidnon buyers and sellers on an interactive map. Find food, clothing, services and more from local small businesses near you.
+    </p>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
+      <button onclick={() => goto('/map')} style="background: #3b82f6; color: white; border: none; padding: 12px 28px; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;">
+        Explore the Map →
+      </button>
+      <button onclick={() => goto('/register-user')} style="background: transparent; color: white; border: 1px solid #333; padding: 12px 28px; border-radius: 8px; font-size: 15px; cursor: pointer;">
+        Register as Seller
+      </button>
+    </div>
   </div>
 
+  <!-- Features -->
+  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #222; border-top: 1px solid #222;">
+    {#each [
+      { icon: '📍', title: 'Map Discovery', desc: 'Find shops near you on an interactive map of Bukidnon' },
+      { icon: '🏪', title: 'Local Sellers', desc: 'Support small and medium enterprises in your community' },
+      { icon: '🔍', title: 'Smart Search', desc: 'Filter by category, name, or location instantly' }
+    ] as feature (feature.title)}
+      <div style="background: #0f0f0f; padding: 2rem; text-align: center;">
+        <div style="font-size: 2rem; margin-bottom: 0.75rem;">{feature.icon}</div>
+        <div style="font-size: 14px; font-weight: 600; margin-bottom: 6px;">{feature.title}</div>
+        <div style="font-size: 13px; color: #666; line-height: 1.6;">{feature.desc}</div>
+      </div>
+    {/each}
+  </div>
+
+  <!-- Footer -->
+  <div style="padding: 1.5rem 2rem; border-top: 1px solid #222; text-align: center; font-size: 12px; color: #444;">
+    LocalMarket — Empowering Local Trade in Bukidnon • Built for the community
+  </div>
 </div>
