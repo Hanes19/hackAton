@@ -33,6 +33,7 @@
   let customerNote = $state('')
   let deliveryMethod = $state<DeliveryMethod>('delivery')
   let paymentMethod = $state<PaymentMethod>('cod')
+  let trackingConsent = $state(false)
 
   let submitting = $state(false)
   let paying = $state(false)
@@ -72,6 +73,10 @@
       error = 'Please enter your delivery address.'
       return
     }
+    if (!trackingConsent) {
+      error = 'Please agree to location tracking and our Terms & Privacy Policy.'
+      return
+    }
 
     submitting = true
     if (isDigitalPay) paying = true
@@ -92,7 +97,8 @@
         customer_phone: customerPhone,
         shipping_address: deliveryMethod === 'delivery' ? shippingAddress : undefined,
         delivery_method: deliveryMethod,
-        payment_method: paymentMethod
+        payment_method: paymentMethod,
+        tracking_consent: trackingConsent
       })
 
       placedOrder = order
@@ -134,7 +140,8 @@
           <strong>₱{Number(placedOrder.total).toLocaleString()}</strong>
         </div>
         <div class="success-actions">
-          <a href="/orders" class="btn primary">View my orders</a>
+          <a href="/orders/{placedOrder.id}/track" class="btn primary">Track order</a>
+          <a href="/orders" class="btn ghost">View all orders</a>
           <a href="/shops/{placedOrder.shop_id}#reviews" class="btn ghost">Back to shop</a>
         </div>
       </div>
@@ -272,7 +279,18 @@
 
         {#if error}<p class="error">{error}</p>{/if}
 
-        <button type="button" class="place-btn" disabled={submitting} onclick={placeOrder}>
+        <label class="consent-box">
+          <input type="checkbox" bind:checked={trackingConsent} />
+          <span>
+            I agree to order-scoped location tracking ({deliveryMethod === 'pickup'
+              ? 'I share my location when heading to the shop'
+              : 'the driver shares location during delivery'}) and accept the
+            <a href="/terms" target="_blank" rel="noopener">Terms</a> and
+            <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>, including rules against fake bookings.
+          </span>
+        </label>
+
+        <button type="button" class="place-btn" disabled={submitting || !trackingConsent} onclick={placeOrder}>
           {#if paying}
             Processing payment…
           {:else if submitting}
@@ -666,6 +684,27 @@
     font-size: 11px;
     color: var(--text-muted);
     text-align: center;
+  }
+
+  .consent-box {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin: 12px 0;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    cursor: pointer;
+  }
+
+  .consent-box input {
+    margin-top: 3px;
+    flex-shrink: 0;
+    accent-color: var(--budol-orange);
+  }
+
+  .consent-box a {
+    color: var(--budol-orange);
   }
 
   .error {

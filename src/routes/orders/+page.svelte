@@ -30,6 +30,10 @@
   function canReview(order: OrderRecord): boolean {
     return ['confirmed', 'shipped', 'completed', 'paid'].includes(order.status)
   }
+
+  function canTrack(order: OrderRecord): boolean {
+    return order.status !== 'cancelled'
+  }
 </script>
 
 <svelte:head>
@@ -79,9 +83,12 @@
             <div class="order-foot">
               <time>{new Date(order.created_at).toLocaleString('en-PH')}</time>
               <div class="actions">
+                {#if canTrack(order)}
+                  <a href="/orders/{order.id}/track" class="small-btn primary">Track</a>
+                {/if}
                 <a href="/shops/{order.shop_id}" class="small-btn">View shop</a>
                 {#if canReview(order)}
-                  <a href="/shops/{order.shop_id}#reviews" class="small-btn primary">Leave review</a>
+                  <a href="/shops/{order.shop_id}#reviews" class="small-btn">Leave review</a>
                 {/if}
               </div>
             </div>

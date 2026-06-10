@@ -18,6 +18,19 @@ function computeShipping(subtotal, deliveryMethod) {
   return DELIVERY_FEE
 }
 
+function trackingFieldsForStatus(status, deliveryMethod) {
+  if (status === 'cancelled' || status === 'completed') {
+    return { tracking_enabled: false, tracked_by: null }
+  }
+  if (deliveryMethod === 'pickup' && status === 'confirmed') {
+    return { tracking_enabled: true, tracked_by: 'customer' }
+  }
+  if (deliveryMethod === 'delivery' && status === 'shipped') {
+    return { tracking_enabled: true, tracked_by: 'driver' }
+  }
+  return {}
+}
+
 async function validateAndPriceItems(supabase, shopId, items) {
   const productIds = items.map((i) => i.product_id).filter(Boolean)
   if (!productIds.length) return { error: 'Invalid cart items.' }
@@ -52,6 +65,26 @@ async function validateAndPriceItems(supabase, shopId, items) {
   return { subtotal, items: pricedItems }
 }
 
+async function fetchOrderWithShop(supabase, id) {
+  const { data: order, error } = await supabase.from('orders').select('*').eq('id', id).single()
+  if (error || !order) return { error: error?.message || 'Order not found.' }
+
+  const { data: shop } = await supabase
+    .from('shops')
+    .select('lat, lng, name')
+    .eq('id', order.shop_id)
+    .maybeSingle()
+
+  return {
+    data: {
+      ...order,
+      shop_lat: shop?.lat ?? null,
+      shop_lng: shop?.lng ?? null,
+      shop_name: order.shop_name || shop?.name || null
+    }
+  }
+}
+
 /** GET /api/orders?shop_id=&user_id= */
 router.get('/', async (req, res) => {
   const { shop_id, user_id } = req.query
@@ -72,6 +105,13 @@ router.get('/', async (req, res) => {
   res.json(data ?? [])
 })
 
+/** GET /api/orders/:id */
+router.get('/:id', async (req, res) => {
+  const result = await fetchOrderWithShop(getSupabase(), req.params.id)
+  if (result.error) return res.status(404).json({ error: result.error })
+  res.json(result.data)
+})
+
 /** POST /api/orders — create order with checkout details */
 router.post('/', async (req, res) => {
   const {
@@ -85,7 +125,8 @@ router.post('/', async (req, res) => {
     customer_phone,
     shipping_address,
     delivery_method = 'delivery',
-    payment_method = 'cod'
+    payment_method = 'cod',
+    tracking_consent
   } = req.body
 
   if (!shop_id || !items?.length) {
@@ -98,6 +139,12 @@ router.post('/', async (req, res) => {
 
   if (delivery_method === 'delivery' && !shipping_address?.trim()) {
     return res.status(400).json({ error: 'Delivery address is required.' })
+  }
+
+  if (!tracking_consent) {
+    return res.status(400).json({
+      error: 'You must agree to location tracking and our Terms & Privacy Policy to place an order.'
+    })
   }
 
   const supabase = getSupabase()
@@ -131,7 +178,8 @@ router.post('/', async (req, res) => {
         delivery_method,
         payment_method,
         payment_status,
-        status
+        status,
+        tracking_consent_at: new Date().toISOString()
       }
     ])
     .select()
@@ -151,15 +199,94 @@ router.patch('/:id', async (req, res) => {
     return res.status(400).json({ error: `Status must be one of: ${allowed.join(', ')}` })
   }
 
-  const { data, error } = await getSupabase()
+  const supabase = getSupabase()
+  const { data: existing, error: fetchErr } = await supabase
     .from('orders')
-    .update({ status })
+    .select('delivery_method')
+    .eq('id', id)
+    .single()
+
+  if (fetchErr || !existing) {
+    return res.status(404).json({ error: 'Order not found.' })
+  }
+
+  const tracking = trackingFieldsForStatus(status, existing.delivery_method)
+  const update = { status, ...tracking }
+
+  if (tracking.tracking_enabled === false) {
+    update.tracker_lat = null
+    update.tracker_lng = null
+    update.tracker_updated_at = null
+  }
+
+  const { data, error } = await supabase
+    .from('orders')
+    .update(update)
     .eq('id', id)
     .select()
     .single()
 
   if (error) return res.status(500).json({ error: error.message })
   if (!data) return res.status(404).json({ error: 'Order not found.' })
+  res.json(data)
+})
+
+/** PATCH /api/orders/:id/tracking — push live location from customer or driver */
+router.patch('/:id/tracking', async (req, res) => {
+  const { id } = req.params
+  const { lat, lng, role } = req.body
+
+  if (role !== 'customer' && role !== 'driver') {
+    return res.status(400).json({ error: 'role must be customer or driver.' })
+  }
+
+  const latitude = Number(lat)
+  const longitude = Number(lng)
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return res.status(400).json({ error: 'Valid lat and lng are required.' })
+  }
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return res.status(400).json({ error: 'Coordinates out of range.' })
+  }
+
+  const supabase = getSupabase()
+  const { data: order, error: fetchErr } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (fetchErr || !order) return res.status(404).json({ error: 'Order not found.' })
+
+  if (!order.tracking_enabled) {
+    return res.status(400).json({ error: 'Tracking is not active for this order.' })
+  }
+
+  if (order.tracked_by !== role) {
+    return res.status(403).json({
+      error:
+        role === 'driver'
+          ? 'Only the delivery driver can share location for this order.'
+          : 'Only the customer can share location for this pickup order.'
+    })
+  }
+
+  if (['completed', 'cancelled'].includes(order.status)) {
+    return res.status(400).json({ error: 'This order is no longer trackable.' })
+  }
+
+  const { data, error } = await supabase
+    .from('orders')
+    .update({
+      tracker_lat: latitude,
+      tracker_lng: longitude,
+      tracker_updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) return res.status(500).json({ error: error.message })
   res.json(data)
 })
 
