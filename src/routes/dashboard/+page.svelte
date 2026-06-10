@@ -26,6 +26,16 @@
   import type { ListingFormData } from '$lib/listingCatalog'
   import type { User } from '@supabase/supabase-js'
   import { fetchShopOrders, updateOrderStatus, statusLabel, paymentLabel, type OrderRecord } from '$lib/checkout'
+  import {
+    nextStatusForOrder,
+    advanceButtonLabel,
+    driverShouldShare,
+    sellerCanWatch,
+    trackingStatusLabel,
+    fetchOrder
+  } from '$lib/orderTracking'
+  import LocationShare from '$lib/LocationShare.svelte'
+  import TrackingMap from '$lib/TrackingMap.svelte'
 
   type Tab = 'overview' | 'setup' | 'listings' | 'orders'
 
@@ -51,6 +61,8 @@
   let showEditor = $state(false)
   let savingListing = $state(false)
   let shopOrders = $state<OrderRecord[]>([])
+  let expandedTrackId = $state<string | null>(null)
+  let trackDetail = $state<Record<string, import('$lib/orderTracking').OrderWithTracking>>({})
   let ordersLoading = $state(false)
 
   const categories = ['Food', 'Clothing', 'Electronics', 'Services', 'Health & Beauty', 'Other']
@@ -225,21 +237,34 @@
   }
 
   async function advanceOrder(order: OrderRecord) {
-    const flow: Record<string, string> = {
-      pending: 'confirmed',
-      paid: 'confirmed',
-      confirmed: 'shipped',
-      shipped: 'completed'
-    }
-    const next = flow[order.status]
+    const next = nextStatusForOrder(order)
     if (!next) return
     try {
-      await updateOrderStatus(order.id, next)
-      shopOrders = shopOrders.map((o) => (o.id === order.id ? { ...o, status: next } : o))
+      const updated = await updateOrderStatus(order.id, next)
+      shopOrders = shopOrders.map((o) => (o.id === order.id ? { ...o, ...updated } : o))
       success = `Order marked as ${statusLabel(next).toLowerCase()}.`
+      if (expandedTrackId === order.id) void loadTrackDetail(order.id)
     } catch (e) {
       error = e instanceof Error ? e.message : 'Could not update order.'
     }
+  }
+
+  async function loadTrackDetail(orderId: string) {
+    try {
+      trackDetail[orderId] = await fetchOrder(orderId)
+      trackDetail = { ...trackDetail }
+    } catch {
+      /* ignore poll errors */
+    }
+  }
+
+  function toggleTrack(orderId: string) {
+    if (expandedTrackId === orderId) {
+      expandedTrackId = null
+      return
+    }
+    expandedTrackId = orderId
+    void loadTrackDetail(orderId)
   }
 
   $effect(() => {
@@ -481,12 +506,51 @@
                   {/if}
                   <div class="order-foot">
                     <strong>₱{Number(order.total).toLocaleString()}</strong>
-                    {#if order.status !== 'completed' && order.status !== 'cancelled'}
-                      <button class="primary-btn small" onclick={() => advanceOrder(order)}>
-                        {order.status === 'pending' || order.status === 'paid' ? 'Confirm' : order.status === 'confirmed' ? 'Mark shipped' : 'Complete'}
-                      </button>
-                    {/if}
+                    <div class="order-actions">
+                      {#if order.tracking_enabled || ['confirmed', 'shipped'].includes(order.status)}
+                        <button type="button" class="secondary-btn small" onclick={() => toggleTrack(order.id)}>
+                          {expandedTrackId === order.id ? 'Hide map' : 'Track'}
+                        </button>
+                      {/if}
+                      {#if order.status !== 'completed' && order.status !== 'cancelled'}
+                        <button class="primary-btn small" onclick={() => advanceOrder(order)}>
+                          {advanceButtonLabel(order)}
+                        </button>
+                      {/if}
+                    </div>
                   </div>
+                  {#if expandedTrackId === order.id}
+                    {@const detail = trackDetail[order.id] ?? order}
+                    <div class="track-panel">
+                      <p class="track-status">{trackingStatusLabel(detail)}</p>
+                      <TrackingMap
+                        shopLat={detail.shop_lat ?? shop?.lat}
+                        shopLng={detail.shop_lng ?? shop?.lng}
+                        shopName={shop?.name ?? 'Your shop'}
+                        trackerLat={detail.tracker_lat}
+                        trackerLng={detail.tracker_lng}
+                        trackerLabel={detail.tracked_by === 'customer' ? 'Customer' : 'Driver'}
+                      />
+                      {#if driverShouldShare(detail)}
+                        <LocationShare
+                          orderId={order.id}
+                          role="driver"
+                          label="Share driver location"
+                          onUpdate={(lat, lng) => {
+                            trackDetail[order.id] = {
+                              ...detail,
+                              tracker_lat: lat,
+                              tracker_lng: lng,
+                              tracker_updated_at: new Date().toISOString()
+                            }
+                            trackDetail = { ...trackDetail }
+                          }}
+                        />
+                      {:else if sellerCanWatch(detail)}
+                        <p class="track-hint">Customer location appears when they share it on the way for pickup.</p>
+                      {/if}
+                    </div>
+                  {/if}
                 </article>
               {/each}
             </div>
@@ -1124,6 +1188,40 @@
   }
 
   .order-foot strong { color: var(--budol-orange); font-size: 16px; }
+
+  .order-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .secondary-btn.small {
+    padding: 7px 14px;
+    font-size: 12px;
+  }
+
+  .track-panel {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .track-status {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dark);
+  }
+
+  .track-hint {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
 
   .primary-btn.small {
     padding: 7px 14px;

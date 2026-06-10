@@ -15,6 +15,7 @@ export interface CheckoutPayload {
   shipping_address?: string
   delivery_method: DeliveryMethod
   payment_method: PaymentMethod
+  tracking_consent: boolean
 }
 
 export interface OrderRecord {
@@ -35,6 +36,12 @@ export interface OrderRecord {
   customer_note: string | null
   user_id: string | null
   created_at: string
+  tracking_enabled?: boolean
+  tracked_by?: 'customer' | 'driver' | null
+  tracker_lat?: number | null
+  tracker_lng?: number | null
+  tracker_updated_at?: string | null
+  tracking_consent_at?: string | null
 }
 
 export const PAYMENT_OPTIONS: Array<{
@@ -69,7 +76,8 @@ export async function submitCheckout(payload: CheckoutPayload): Promise<OrderRec
       customer_phone: payload.customer_phone,
       shipping_address: payload.shipping_address,
       delivery_method: payload.delivery_method,
-      payment_method: payload.payment_method
+      payment_method: payload.payment_method,
+      tracking_consent: payload.tracking_consent
     })
   })
   const data = await res.json()
